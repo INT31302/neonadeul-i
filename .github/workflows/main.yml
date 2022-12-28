@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: '16.19'
       - name: Install dependencies
-        run: npm ci
+        run: pnpm i
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
