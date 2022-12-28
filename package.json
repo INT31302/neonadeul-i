@@ -96,6 +96,9 @@
     "type": "git",
     "url": "git@github.com:INT31302/neonadeul-i.git"
   },
+  "lint-staged": {
+    "*.{ts,md}": "npm run format"
+  },
   "config": {
     "commitizen": {
       "path": "./node_modules/cz-conventional-changelog"
