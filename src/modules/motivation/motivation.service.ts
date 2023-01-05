@@ -28,14 +28,14 @@ export class MotivationService {
       where: { date: dayjs().format('YYYYMMDD') },
     });
     if (holiday) return;
-    const userList = await this.userRepository.find({
-      where: { isSubscribe: true },
-    });
-    const motivationList = await this.motivationRepository.find();
     const time = dayjs().format('HH:mm');
+    const userList = await this.userRepository.find({
+      where: { isSubscribe: true, pushTime: time },
+    });
+    if (userList.length === 0) return;
+    const motivationList = await this.motivationRepository.find();
     let count = 0;
     userList.map(async (user) => {
-      if (time !== user.pushTime) return;
       const candidates = this.weightedRandom(user);
       const category = this.getRandomCategory(candidates);
       const motivation = await this.getMotivation(motivationList, category, user.modernText);
