@@ -61,9 +61,8 @@ export class SlackController {
 
   @SlackInteractivityHandler(ACTION_ID.TIMEPICKER)
   setTime(payload: any): Promise<ChatPostMessageResponse> {
-    const result = JSON.parse(payload);
-    const userId = result.user.id;
-    const selectedTime = result.actions[0].selected_time;
+    const userId = payload.user.id;
+    const selectedTime = payload.actions[0].selected_time;
     return this.slackInteractiveService.setTime(userId, selectedTime);
   }
 
