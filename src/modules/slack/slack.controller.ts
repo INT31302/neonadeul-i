@@ -24,6 +24,7 @@ export class SlackController {
   // event-api
   @SlackEventHandler('message')
   async onMessage(event: SlackEventDto): Promise<ChatPostMessageResponse> {
+    console.log(event);
     if (this.slackEventService.isDMChannel(event)) return;
     if (this.slackEventService.isBot(event)) return;
     if (event.text) {
@@ -36,7 +37,8 @@ export class SlackController {
   }
 
   @SlackEventHandler('app_home_opened')
-  onAppHomeOpened(event: SlackEventDto): Promise<ViewsPublishResponse> {
+  onAppHomeOpened(event: any): Promise<ViewsPublishResponse> {
+    console.log(event);
     return this.slackEventService.setHome(event);
   }
 
