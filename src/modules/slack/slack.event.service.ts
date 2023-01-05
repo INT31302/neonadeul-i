@@ -7,7 +7,6 @@ import { NotionType } from '@lib/notion/notion.type';
 import { NotionService } from '@lib/notion';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { BotProfile } from '@src/modules/slack/dto/slack-event.dto';
 
 @Injectable()
 export class SlackEventService {
@@ -33,9 +32,8 @@ export class SlackEventService {
    * 메시지 수신자가 봇인지 체크 로직
    * @param event
    */
-  isBot(event: any): BotProfile {
-    console.log(event);
-    return event.bot_profile;
+  isBot(event: any): boolean {
+    return 'bot_profile' in event;
   }
 
   /**

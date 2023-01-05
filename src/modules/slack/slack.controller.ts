@@ -1,4 +1,4 @@
-import { Body, Controller } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { CategoryType } from '@src/modules/motivation/movitation.type';
 import {
   SlackEventHandler,
@@ -41,34 +41,30 @@ export class SlackController {
 
   //interactive-api
   @SlackInteractivityHandler(ACTION_ID.SUBSCRIBE)
-  setSubscribe(@Body() { payload }: any): Promise<ChatPostMessageResponse> {
-    const result = JSON.parse(payload);
-    const userId = result.user.id;
+  setSubscribe(payload: any): Promise<ChatPostMessageResponse> {
+    const userId = payload.user.id;
     return this.slackInteractiveService.subscribe(userId);
   }
   @SlackInteractivityHandler(ACTION_ID.UNSUBSCRIBE)
-  setUnsubscribe(@Body() { payload }: any): Promise<ChatPostMessageResponse> {
-    const result = JSON.parse(payload);
-    const userId = result.user.id;
+  setUnsubscribe(payload: any): Promise<ChatPostMessageResponse> {
+    const userId = payload.user.id;
     return this.slackInteractiveService.unsubscribe(userId);
   }
 
   @SlackInteractivityHandler(ACTION_ID.MODERN_TEXT_ON)
-  setModernTextOn(@Body() { payload }: any): Promise<ChatPostMessageResponse> {
-    const result = JSON.parse(payload);
-    const userId = result.user.id;
+  setModernTextOn(payload: any): Promise<ChatPostMessageResponse> {
+    const userId = payload.user.id;
     return this.slackInteractiveService.modernOn(userId);
   }
 
   @SlackInteractivityHandler(ACTION_ID.MODERN_TEXT_OFF)
-  setModernTextOff(@Body() { payload }: any): Promise<ChatPostMessageResponse> {
-    const result = JSON.parse(payload);
-    const userId = result.user.id;
+  setModernTextOff(payload: any): Promise<ChatPostMessageResponse> {
+    const userId = payload.user.id;
     return this.slackInteractiveService.modernOff(userId);
   }
 
   @SlackInteractivityHandler(ACTION_ID.TIMEPICKER)
-  setTime(@Body() { payload }: any): Promise<ChatPostMessageResponse> {
+  setTime(payload: any): Promise<ChatPostMessageResponse> {
     const result = JSON.parse(payload);
     const userId = result.user.id;
     const selectedTime = result.actions[0].selected_time;
@@ -77,27 +73,24 @@ export class SlackController {
 
   @SlackInteractivityHandler(ACTION_ID.CHEERING_SCORE)
   setCheeringScore(payload: any) {
-    console.log(payload);
-    // const userId = result.user.id;
-    // const value = Number(result.actions[0].selected_option.text.text);
+    const userId = payload.user.id;
+    const value = Number(payload.actions[0].selected_option.text.text);
     //
-    // return this.slackInteractiveService.updatePreference(userId, CategoryType.응원, value);
+    return this.slackInteractiveService.updatePreference(userId, CategoryType.응원, value);
   }
 
   @SlackInteractivityHandler(ACTION_ID.MOTIVATION_SCORE)
-  setMotivationScore(@Body() { payload }: any): Promise<ChatPostMessageResponse> {
-    const result = JSON.parse(payload);
-    const userId = result.user.id;
-    const value = Number(result.actions[0].selected_option.text.text);
+  setMotivationScore(payload: any): Promise<ChatPostMessageResponse> {
+    const userId = payload.user.id;
+    const value = Number(payload.actions[0].selected_option.text.text);
 
     return this.slackInteractiveService.updatePreference(userId, CategoryType.동기부여, value);
   }
 
   @SlackInteractivityHandler(ACTION_ID.CONSOLATION_SCORE)
-  setConsolationScore(@Body() { payload }: any): Promise<ChatPostMessageResponse> {
-    const result = JSON.parse(payload);
-    const userId = result.user.id;
-    const value = Number(result.actions[0].selected_option.text.text);
+  setConsolationScore(payload: any): Promise<ChatPostMessageResponse> {
+    const userId = payload.user.id;
+    const value = Number(payload.actions[0].selected_option.text.text);
 
     return this.slackInteractiveService.updatePreference(userId, CategoryType.위로, value);
   }
