@@ -34,6 +34,7 @@ export class SlackEventService {
    * @param event
    */
   isBot(event: any): BotProfile {
+    console.log(event);
     return event.bot_profile;
   }
 

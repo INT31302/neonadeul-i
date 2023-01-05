@@ -76,7 +76,7 @@ export class SlackController {
   }
 
   @SlackInteractivityHandler(ACTION_ID.CHEERING_SCORE)
-  setCheeringScore(@Body() { payload }: any) {
+  setCheeringScore(payload: any) {
     console.log(payload);
     // const userId = result.user.id;
     // const value = Number(result.actions[0].selected_option.text.text);
