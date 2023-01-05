@@ -11,6 +11,9 @@ import { SlackInteractiveService } from '@src/modules/slack/slack.interactive.se
 import { SlackEventService } from '@src/modules/slack/slack.event.service';
 import { ACTION_ID } from '@src/modules/slack/slack.constants';
 import { ChatPostMessageResponse, ViewsPublishResponse } from '@slack/web-api';
+import { NotionService } from '@lib/notion';
+import { NotionType } from '@lib/notion/notion.type';
+import { isNil } from '@nestjs/common/utils/shared.utils';
 
 @Controller('slack')
 @SlackEventListener()
@@ -19,6 +22,7 @@ export class SlackController {
   constructor(
     private readonly slackInteractiveService: SlackInteractiveService,
     private readonly slackEventService: SlackEventService,
+    private readonly notionService: NotionService,
   ) {}
 
   // event-api
@@ -26,7 +30,10 @@ export class SlackController {
   async onMessage(event: SlackEventDto): Promise<ChatPostMessageResponse> {
     if (this.slackEventService.isDMChannel(event)) return;
     if (this.slackEventService.isBot(event)) return;
-    if (event.text && event.text.includes('제리')) await this.slackEventService.jvent(event);
+    if (event.text) {
+      const message = await this.notionService.searchQueryByName(event.text, NotionType.EASTER_EGG);
+      await this.slackEventService.sendEasterEgg(event, message);
+    }
     return this.slackInteractiveService.postMessage(
       event.channel,
       '안녕하세요! 너나들이의 자세한 내용은 좌측 상단의 홈 탭을 참고해주세요!',
