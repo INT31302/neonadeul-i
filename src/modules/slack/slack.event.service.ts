@@ -89,7 +89,7 @@ export class SlackEventService {
         '너나들이가 입력중... (답변이  작성되면 수정됩니다.)',
       );
       message = await this.openaiService.sendMessage(event.text);
-      return await this.slackInteractiveService.updateMessageByChat(user.channelId, message, ts);
+      return await this.slackInteractiveService.updateMessage(user.channelId, message, ts);
       // return await this.slackInteractiveService.postMessage(
       //   user.channelId,
       //   '안녕하세요! 너나들이의 자세한 내용은 좌측 상단의 홈 탭을 참고해주세요!',
