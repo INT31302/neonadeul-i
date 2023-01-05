@@ -8,9 +8,6 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     steps:
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 6.0.2
       - name: Checkout
         uses: actions/checkout@v3
         with:
@@ -20,7 +17,7 @@ jobs:
         with:
           node-version: '16.19'
       - name: Install dependencies
-        run: pnpm i
+        run: npm ci
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
