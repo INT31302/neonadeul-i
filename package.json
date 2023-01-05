@@ -112,5 +112,15 @@
     "commitizen": {
       "path": "./node_modules/cz-conventional-changelog"
     }
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "ignoreMissing": [
+        "babel-loader"
+      ],
+      "allowedVersions": {
+        "@nestjs/common": "9.2.1"
+      }
+    }
   }
 }
