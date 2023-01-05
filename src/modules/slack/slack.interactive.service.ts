@@ -8,6 +8,13 @@ import { ChatPostMessageResponse, ViewsPublishArguments, ViewsPublishResponse } 
 import { User } from '@src/modules/user/entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as dayjs from 'dayjs';
+import * as utc from 'dayjs/plugin/utc';
+import * as timezone from 'dayjs/plugin/timezone';
+import { timestamp } from 'rxjs';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 @Injectable()
 export class SlackInteractiveService {
@@ -43,6 +50,20 @@ export class SlackInteractiveService {
       text: message,
       channel,
     });
+  }
+  getChat() {
+    return this.slack.chat;
+  }
+  async postMessageByChat(chat: any, channel: string, message: string): Promise<ChatPostMessageResponse> {
+    return await chat.postMessage({
+      text: message,
+      channel,
+    });
+  }
+
+  async updateMessageByChat(chat: any, channel: string, message: string) {
+    const timestamp = dayjs().tz('Asia/Seoul').unix();
+    await chat.update({ text: message, tz: timestamp, channel });
   }
 
   /**

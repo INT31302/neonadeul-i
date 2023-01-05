@@ -83,8 +83,13 @@ export class SlackEventService {
     let message = await this.notionService.searchQueryByName(event.text, NotionType.EASTER_EGG);
     const user = await this.userRepository.findOneBy({ id: event.user });
     if (isNil(message)) {
+      const chat = this.slackInteractiveService.getChat();
+      await this.slackInteractiveService.postMessageByChat(
+        chat,
+        user.channelId,
+        '너나들이가 입력중... (답변이  작성되면 수정됩니다.)',
+      );
       message = await this.openaiService.sendMessage(event.text);
-      await this.slackInteractiveService.postMessage(user.channelId, '');
       return await this.slackInteractiveService.postMessage(user.channelId, message);
       // return await this.slackInteractiveService.postMessage(
       //   user.channelId,
