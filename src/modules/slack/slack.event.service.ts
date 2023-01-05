@@ -84,6 +84,7 @@ export class SlackEventService {
     const user = await this.userRepository.findOneBy({ id: event.user });
     if (isNil(message)) {
       message = await this.openaiService.sendMessage(event.text);
+      await this.slackInteractiveService.postMessage(user.channelId, null);
       return await this.slackInteractiveService.postMessage(user.channelId, message);
       // return await this.slackInteractiveService.postMessage(
       //   user.channelId,
