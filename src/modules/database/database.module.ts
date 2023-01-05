@@ -48,7 +48,7 @@ const DatabaseModule = Module.forRootAsync({
 
     return {
       type: 'postgres',
-      entities: [__dirname + '/../modules/**/*.entity{.ts,.js}'],
+      autoLoadEntities: true,
       namingStrategy: new SnakeNamingStrategy(),
       synchronize: false,
       //

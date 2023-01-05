@@ -5,14 +5,15 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { NotionService } from '@lib/notion';
 import { InjectSlackClient, SlackClient } from 'nestjs-slack-listener';
 import { ChatPostMessageResponse, ViewsPublishArguments, ViewsPublishResponse } from '@slack/web-api';
-import { UserRepository } from '@src/modules/user/repository/user.repository';
 import { User } from '@src/modules/user/entities/user.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class SlackInteractiveService {
   private readonly loggger: Logger = new Logger(this.constructor.name);
   constructor(
-    private readonly userRepository: UserRepository,
+    @InjectRepository(User) private userRepository: Repository<User>,
     private readonly notionService: NotionService,
     @InjectSlackClient()
     private readonly slack: SlackClient,

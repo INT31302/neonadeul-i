@@ -1,13 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as dayjs from 'dayjs';
 import { User } from '@src/modules/user/entities/user.entity';
-import { UserRepository } from '@src/modules/user/repository/user.repository';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class UserService {
   private readonly logger: Logger = new Logger(this.constructor.name);
 
-  constructor(private readonly userRepository: UserRepository) {}
+  constructor(@InjectRepository(User) private userRepository: Repository<User>) {}
 
   /**
    * 사용자 정보를 생성합니다.

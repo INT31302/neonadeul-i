@@ -1,20 +1,22 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { NotionService } from '@lib/notion';
 import { BotProfile, SlackEventDto } from '@src/modules/slack/dto/slack-event.dto';
 import { SlackInteractiveService } from '@src/modules/slack/slack.interactive.service';
-import { UserRepository } from '@src/modules/user/repository/user.repository';
 import { ChatPostMessageResponse, UsersInfoResponse, ViewsPublishResponse } from '@slack/web-api';
 import { User } from '@src/modules/user/entities/user.entity';
 import { InjectSlackClient, SlackClient } from 'nestjs-slack-listener';
+import { NotionType } from '@lib/notion/notion.type';
+import { NotionService } from '@lib/notion';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class SlackEventService {
   private readonly logger: Logger = new Logger(this.constructor.name);
 
   constructor(
-    private readonly userRepository: UserRepository,
-    private readonly notionService: NotionService,
+    @InjectRepository(User) private userRepository: Repository<User>,
     private readonly slackInteractiveService: SlackInteractiveService,
+    private readonly notionService: NotionService,
     @InjectSlackClient()
     private readonly slack: SlackClient,
   ) {}
@@ -74,9 +76,10 @@ export class SlackEventService {
   /**
    * 이스터에그 메시지 발송
    * @param event
-   * @param message
    */
-  async sendEasterEgg(event: SlackEventDto, message: string): Promise<ChatPostMessageResponse> {
+  async sendEasterEgg(event: SlackEventDto): Promise<ChatPostMessageResponse> {
+    let message = await this.notionService.searchQueryByName(event.text, NotionType.EASTER_EGG);
+
     const user = await this.userRepository.findOneBy({ id: event.user });
     message = message.replace(/\${name}/gi, user.name);
     // if (user.jerry)

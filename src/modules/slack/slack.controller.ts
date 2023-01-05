@@ -11,18 +11,14 @@ import { SlackInteractiveService } from '@src/modules/slack/slack.interactive.se
 import { SlackEventService } from '@src/modules/slack/slack.event.service';
 import { ACTION_ID } from '@src/modules/slack/slack.constants';
 import { ChatPostMessageResponse, ViewsPublishResponse } from '@slack/web-api';
-import { NotionService } from '@lib/notion';
-import { NotionType } from '@lib/notion/notion.type';
-import { isNil } from '@nestjs/common/utils/shared.utils';
 
-@Controller('slack')
+@Controller('slack-event')
 @SlackEventListener()
 @SlackInteractivityListener()
 export class SlackController {
   constructor(
     private readonly slackInteractiveService: SlackInteractiveService,
     private readonly slackEventService: SlackEventService,
-    private readonly notionService: NotionService,
   ) {}
 
   // event-api
@@ -31,8 +27,7 @@ export class SlackController {
     if (this.slackEventService.isDMChannel(event)) return;
     if (this.slackEventService.isBot(event)) return;
     if (event.text) {
-      const message = await this.notionService.searchQueryByName(event.text, NotionType.EASTER_EGG);
-      await this.slackEventService.sendEasterEgg(event, message);
+      await this.slackEventService.sendEasterEgg(event);
     }
     return this.slackInteractiveService.postMessage(
       event.channel,

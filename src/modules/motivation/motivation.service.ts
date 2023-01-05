@@ -5,18 +5,18 @@ import { Motivation } from '@src/modules/motivation/entities/motivation.entity';
 import * as dayjs from 'dayjs';
 import { CategoryType } from '@src/modules/motivation/movitation.type';
 import { Cron } from '@nestjs/schedule';
-import { UserRepository } from '@src/modules/user/repository/user.repository';
-import { HolidayRepository } from '@src/modules/holiday/repository/holiday.repository';
-import { MotivationRepository } from '@src/modules/motivation/repository/motivation.repository';
 import { SlackInteractiveService } from '@src/modules/slack/slack.interactive.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Holiday } from '@src/modules/holiday/entities/holiday.entity';
 
 @Injectable()
 export class MotivationService {
   private readonly logger: Logger = new Logger(this.constructor.name);
   constructor(
-    private readonly userRepository: UserRepository,
-    private readonly motivationRepository: MotivationRepository,
-    private readonly holidayRepository: HolidayRepository,
+    @InjectRepository(User) private userRepository: Repository<User>,
+    @InjectRepository(Motivation) private motivationRepository: Repository<Motivation>,
+    @InjectRepository(Holiday) private holidayRepository: Repository<Holiday>,
     private readonly slackInteractiveService: SlackInteractiveService,
   ) {}
 
