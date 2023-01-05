@@ -26,12 +26,8 @@ export class SlackController {
     if (this.slackEventService.isDMChannel(event)) return;
     if (this.slackEventService.isBot(event)) return;
     if (event.text) {
-      await this.slackEventService.sendEasterEgg(event);
+      await this.slackEventService.sendMessage(event);
     }
-    return this.slackInteractiveService.postMessage(
-      event.channel,
-      '안녕하세요! 너나들이의 자세한 내용은 좌측 상단의 홈 탭을 참고해주세요!',
-    );
   }
 
   @SlackEventHandler('app_home_opened')

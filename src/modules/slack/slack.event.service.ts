@@ -7,6 +7,7 @@ import { NotionType } from '@lib/notion/notion.type';
 import { NotionService } from '@lib/notion';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { isNil } from '@nestjs/common/utils/shared.utils';
 
 @Injectable()
 export class SlackEventService {
@@ -73,22 +74,18 @@ export class SlackEventService {
   }
 
   /**
-   * 이스터에그 메시지 발송
+   *
    * @param event
    */
-  async sendEasterEgg(event: any): Promise<ChatPostMessageResponse> {
+  async sendMessage(event: any): Promise<ChatPostMessageResponse> {
     let message = await this.notionService.searchQueryByName(event.text, NotionType.EASTER_EGG);
-
     const user = await this.userRepository.findOneBy({ id: event.user });
+    if (isNil(message))
+      return await this.slackInteractiveService.postMessage(
+        user.channelId,
+        '안녕하세요! 너나들이의 자세한 내용은 좌측 상단의 홈 탭을 참고해주세요!',
+      );
     message = message.replace(/\${name}/gi, user.name);
-    // if (user.jerry)
-    //   return await this.slackInteractiveService.postMessage(
-    //     user.channelId,
-    //     '안녕하세요! 너나들이의 자세한 내용은 좌측 상단의 홈 탭을 참고해주세요!',
-    //   );
-    // user.jerry = true;
-    // console.log(`${user.name} 제리 활성화`);
-    // await this.userRepository.save(user);
     return await this.slackInteractiveService.postMessage(user.channelId, message);
   }
 }
