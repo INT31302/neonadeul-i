@@ -9,6 +9,11 @@ import { SlackInteractiveService } from '@src/modules/slack/slack.interactive.se
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Holiday } from '@src/modules/holiday/entities/holiday.entity';
+import * as utc from 'dayjs/plugin/utc';
+import * as timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 @Injectable()
 export class MotivationService {
@@ -28,7 +33,7 @@ export class MotivationService {
       where: { date: dayjs().format('YYYYMMDD') },
     });
     if (holiday) return;
-    const time = dayjs().format('HH:mm');
+    const time = dayjs().tz('Asia/Seoul').format('HH:mm');
     const userList = await this.userRepository.find({
       where: { isSubscribe: true, pushTime: time },
     });

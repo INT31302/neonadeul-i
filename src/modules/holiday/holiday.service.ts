@@ -7,6 +7,11 @@ import { HttpService } from '@nestjs/axios';
 import { HolidayType } from '@src/modules/holiday/holiday.type';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Holiday } from '@src/modules/holiday/entities/holiday.entity';
+import * as utc from 'dayjs/plugin/utc';
+import * as timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 @Injectable()
 export class HolidayService {
@@ -26,7 +31,7 @@ export class HolidayService {
   }
 
   async create() {
-    const year = dayjs().year();
+    const year = dayjs().tz('Asia/Seoul').year();
     const serviceKey = process.env.HOLIDAY_API_KEY;
     const items: HolidayType[] = await lastValueFrom(
       this.httpService.get(
