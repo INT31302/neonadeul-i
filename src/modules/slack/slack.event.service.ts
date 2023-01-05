@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { BotProfile, SlackEventDto } from '@src/modules/slack/dto/slack-event.dto';
 import { SlackInteractiveService } from '@src/modules/slack/slack.interactive.service';
 import { ChatPostMessageResponse, UsersInfoResponse, ViewsPublishResponse } from '@slack/web-api';
 import { User } from '@src/modules/user/entities/user.entity';
@@ -8,6 +7,7 @@ import { NotionType } from '@lib/notion/notion.type';
 import { NotionService } from '@lib/notion';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { BotProfile } from '@src/modules/slack/dto/slack-event.dto';
 
 @Injectable()
 export class SlackEventService {
@@ -25,7 +25,7 @@ export class SlackEventService {
    * 봇 호출한 곳이 DM Channel 인지 체크 로직
    * @param event
    */
-  isDMChannel(event: SlackEventDto): boolean {
+  isDMChannel(event: any): boolean {
     return event.channel_type !== 'im';
   }
 
@@ -33,7 +33,7 @@ export class SlackEventService {
    * 메시지 수신자가 봇인지 체크 로직
    * @param event
    */
-  isBot(event: SlackEventDto): BotProfile {
+  isBot(event: any): BotProfile {
     return event.bot_profile;
   }
 
@@ -41,7 +41,7 @@ export class SlackEventService {
    * appHome 설정 로직
    * @param event
    */
-  async setHome(event: SlackEventDto): Promise<ViewsPublishResponse> {
+  async setHome(event: any): Promise<ViewsPublishResponse> {
     const user = await this.saveUser(event);
     const homeTemplate = this.slackInteractiveService.createView(user);
     return await this.slackInteractiveService.publishView(homeTemplate);
@@ -51,7 +51,7 @@ export class SlackEventService {
    * appHome 진입 시 유저 저장 로직
    * @param event
    */
-  async saveUser(event: SlackEventDto): Promise<User> {
+  async saveUser(event: any): Promise<User> {
     const response = await this.getUserInfo(event.user);
     const displayName = response.user.profile.display_name;
     const name = displayName.includes('(') ? displayName.split('(')[1].split(')')[0] : displayName;
@@ -77,7 +77,7 @@ export class SlackEventService {
    * 이스터에그 메시지 발송
    * @param event
    */
-  async sendEasterEgg(event: SlackEventDto): Promise<ChatPostMessageResponse> {
+  async sendEasterEgg(event: any): Promise<ChatPostMessageResponse> {
     let message = await this.notionService.searchQueryByName(event.text, NotionType.EASTER_EGG);
 
     const user = await this.userRepository.findOneBy({ id: event.user });

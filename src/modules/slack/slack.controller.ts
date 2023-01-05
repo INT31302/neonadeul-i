@@ -6,7 +6,6 @@ import {
   SlackInteractivityHandler,
   SlackInteractivityListener,
 } from 'nestjs-slack-listener';
-import { SlackEventDto } from '@src/modules/slack/dto/slack-event.dto';
 import { SlackInteractiveService } from '@src/modules/slack/slack.interactive.service';
 import { SlackEventService } from '@src/modules/slack/slack.event.service';
 import { ACTION_ID } from '@src/modules/slack/slack.constants';
@@ -23,7 +22,7 @@ export class SlackController {
 
   // event-api
   @SlackEventHandler('message')
-  async onMessage({ event }): Promise<ChatPostMessageResponse> {
+  async onMessage({ event }: any): Promise<ChatPostMessageResponse> {
     if (this.slackEventService.isDMChannel(event)) return;
     if (this.slackEventService.isBot(event)) return;
     if (event.text) {
@@ -36,7 +35,7 @@ export class SlackController {
   }
 
   @SlackEventHandler('app_home_opened')
-  onAppHomeOpened({ event }): Promise<ViewsPublishResponse> {
+  onAppHomeOpened({ event }: any): Promise<ViewsPublishResponse> {
     return this.slackEventService.setHome(event);
   }
 
@@ -77,12 +76,12 @@ export class SlackController {
   }
 
   @SlackInteractivityHandler(ACTION_ID.CHEERING_SCORE)
-  setCheeringScore(@Body() { payload }: any): Promise<ChatPostMessageResponse> {
-    const result = JSON.parse(payload);
-    const userId = result.user.id;
-    const value = Number(result.actions[0].selected_option.text.text);
-
-    return this.slackInteractiveService.updatePreference(userId, CategoryType.응원, value);
+  setCheeringScore(@Body() { payload }: any) {
+    console.log(payload);
+    // const userId = result.user.id;
+    // const value = Number(result.actions[0].selected_option.text.text);
+    //
+    // return this.slackInteractiveService.updatePreference(userId, CategoryType.응원, value);
   }
 
   @SlackInteractivityHandler(ACTION_ID.MOTIVATION_SCORE)
