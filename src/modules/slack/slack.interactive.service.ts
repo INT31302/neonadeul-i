@@ -62,8 +62,8 @@ export class SlackInteractiveService {
   }
 
   async updateMessageByChat(chat: any, channel: string, message: string) {
-    const timestamp = dayjs().tz('Asia/Seoul').unix();
-    return await chat.update({ text: message, tz: timestamp, channel });
+    const timestamp = dayjs().tz('Asia/Seoul').unix().toString();
+    return await chat.update({ text: message, ts: timestamp, channel });
   }
 
   /**
