@@ -16,8 +16,12 @@ export class OpenaiService {
     const axiosResponse = await this.openai.createCompletion({
       model: 'text-davinci-003',
       prompt: message,
-      max_tokens: 2048,
-      temperature: 0,
+      temperature: 0.7,
+      max_tokens: 2000,
+      top_p: 1,
+      frequency_penalty: 0,
+      presence_penalty: 0,
+      stream: false,
     });
     return axiosResponse.data.choices[0].text;
   }
