@@ -17,20 +17,17 @@ enum AppEnvKey {
 }
 
 // ConfigFactory
-const AppConfig = registerAs<AppConfigs, ConfigFactory<AppConfigs>>(
-  AppConfigKey,
-  () => {
-    const env = process.env.APP_ENV || AppEnvKey.LOCAL;
-    const port = process.env.APP_PORT || '3000';
-    const isProduction = env === AppEnvKey.PROD;
+const AppConfig = registerAs<AppConfigs, ConfigFactory<AppConfigs>>(AppConfigKey, () => {
+  const env = process.env.APP_ENV || AppEnvKey.LOCAL;
+  const port = process.env.APP_PORT || '3000';
+  const isProduction = env === AppEnvKey.PROD;
 
-    return {
-      env,
-      port: Number.parseInt(port),
-      isProduction,
-    };
-  },
-);
+  return {
+    env,
+    port: Number.parseInt(port),
+    isProduction,
+  };
+});
 
 export default AppConfig;
 export { AppConfigKey, AppEnvKey, AppConfigs };

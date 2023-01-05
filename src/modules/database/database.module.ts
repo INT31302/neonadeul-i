@@ -3,10 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectConnection, TypeOrmModule } from '@nestjs/typeorm';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm/dist/interfaces/typeorm-options.interface';
 import { AppConfigKey, AppConfigs } from '@src/config/app.config';
-import {
-  DatabaseConfigKey,
-  DatabaseConfigs,
-} from '@src/config/database.config';
+import { DatabaseConfigKey, DatabaseConfigs } from '@src/config/database.config';
 import { Connection } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
@@ -47,8 +44,7 @@ const DatabaseModule = Module.forRootAsync({
   useFactory: (config: ConfigService): TypeOrmModuleOptions => {
     const { isProduction } = config.get<AppConfigs>(AppConfigKey);
 
-    const { host, port, database, user, password } =
-      config.get<DatabaseConfigs>(DatabaseConfigKey);
+    const { host, port, database, user, password } = config.get<DatabaseConfigs>(DatabaseConfigKey);
 
     return {
       type: 'postgres',
@@ -57,8 +53,7 @@ const DatabaseModule = Module.forRootAsync({
       synchronize: false,
       //
       // logging level
-      logging:
-        isProduction === true ? ['info'] : ['query', 'log', 'info', 'error'],
+      logging: isProduction === true ? ['info'] : ['query', 'log', 'info', 'error'],
       ssl: {
         rejectUnauthorized: false,
       },

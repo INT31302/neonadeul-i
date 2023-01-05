@@ -18,7 +18,15 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@src/*": ["src/*"]
+      "@src/*": [
+        "src/*"
+      ],
+      "@lib/notion": [
+        "libs/notion/src"
+      ],
+      "@lib/notion/*": [
+        "libs/notion/src/*"
+      ]
     }
   }
 }

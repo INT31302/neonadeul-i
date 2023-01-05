@@ -12,10 +12,7 @@ interface DatabaseConfigs {
 }
 
 //
-const DatabaseConfig = registerAs<
-  DatabaseConfigs,
-  ConfigFactory<DatabaseConfigs>
->(DatabaseConfigKey, () => {
+const DatabaseConfig = registerAs<DatabaseConfigs, ConfigFactory<DatabaseConfigs>>(DatabaseConfigKey, () => {
   return {
     host: process.env.DB_HOST || 'localhost',
     port: Number.parseInt(process.env.DB_PORT || '3306'),

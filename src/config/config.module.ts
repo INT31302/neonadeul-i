@@ -6,10 +6,7 @@ import DatabaseConfig from '@src/config/database.config';
 const ConfigModule = NestJSConfigModule.forRoot({
   isGlobal: true,
   cache: true,
-  envFilePath:
-    (process.env.APP_ENV || AppEnvKey.LOCAL) === AppEnvKey.LOCAL
-      ? '.env'
-      : `.env.${process.env.APP_ENV}`,
+  envFilePath: (process.env.APP_ENV || AppEnvKey.LOCAL) === AppEnvKey.LOCAL ? '.env' : `.env.${process.env.APP_ENV}`,
   ignoreEnvFile: process.env.APP_ENV === AppEnvKey.PROD,
   load: [AppConfig, DatabaseConfig],
 });

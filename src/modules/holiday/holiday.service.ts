@@ -1,12 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { UpdateHolidayDto } from './dto/update-holiday.dto';
 import * as dayjs from 'dayjs';
-import { Connection, Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
+import { Connection } from 'typeorm';
 import { lastValueFrom } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
-import { Holiday } from '@src/modules/holiday/entities/holiday.entity';
 import { HolidayType } from '@src/modules/holiday/holiday.type';
+import { HolidayRepository } from '@src/modules/holiday/repository/holiday.repository';
 
 @Injectable()
 export class HolidayService {
@@ -15,11 +14,10 @@ export class HolidayService {
   constructor(
     private readonly httpService: HttpService,
     private readonly connection: Connection,
-    @InjectRepository(Holiday)
-    private readonly holidayRepository: Repository<Holiday>,
+    private readonly holidayRepository: HolidayRepository,
   ) {}
 
-  async startTransaction() {
+  private async startTransaction() {
     const queryRunner = await this.connection.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();

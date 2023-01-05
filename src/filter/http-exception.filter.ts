@@ -1,11 +1,4 @@
-import {
-  ArgumentsHost,
-  Catch,
-  ExceptionFilter,
-  HttpException,
-  HttpStatus,
-  Logger,
-} from '@nestjs/common';
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import * as dayjs from 'dayjs';
 import { Request, Response } from 'express';
 
@@ -24,10 +17,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const request: Request = ctx.getRequest();
 
     // http exception 이 아닐경우, 500 error 로 변환후 반환합니다.
-    const status =
-      exception instanceof HttpException
-        ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
+    const status = exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
 
     response.status(status).json({
       statusCode: status,
@@ -56,9 +46,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     this.logger.debug(`host type: ${host.getType}`);
 
-    return new HttpException(
-      'UnhandledError',
-      HttpStatus.INTERNAL_SERVER_ERROR,
-    );
+    return new HttpException('UnhandledError', HttpStatus.INTERNAL_SERVER_ERROR);
   }
 }

@@ -11,6 +11,7 @@ import { HolidayModule } from '@src/modules/holiday/holiday.module';
 import ConfigModule from '@src/config/config.module';
 import { APP_FILTER } from '@nestjs/core';
 import { HttpExceptionFilter } from '@src/filter/http-exception.filter';
+import { SlackModule as SlackListenerModule } from 'nestjs-slack-listener';
 
 @Module({
   imports: [
@@ -18,6 +19,11 @@ import { HttpExceptionFilter } from '@src/filter/http-exception.filter';
     DatabaseModule,
     UserModule,
     SlackModule,
+    SlackListenerModule.forRootAsync({
+      useFactory: async () => ({
+        botToken: process.env.BOT_USER_OAUTH_ACCESS_TOKEN,
+      }),
+    }),
     MotivationModule,
     HttpModule,
     ScheduleModule.forRoot(),

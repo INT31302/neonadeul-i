@@ -1,30 +1,29 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ChatPostMessageResponse, WebClient } from '@slack/web-api';
-import { InjectRepository } from '@nestjs/typeorm';
+import { ChatPostMessageResponse } from '@slack/web-api';
 import { User } from '@src/modules/user/entities/user.entity';
-import { Repository } from 'typeorm';
 import { Motivation } from '@src/modules/motivation/entities/motivation.entity';
 import * as dayjs from 'dayjs';
-import { Holiday } from '@src/modules/holiday/entities/holiday.entity';
 import { CategoryType } from '@src/modules/motivation/movitation.type';
 import { Cron } from '@nestjs/schedule';
+import { UserRepository } from '@src/modules/user/repository/user.repository';
+import { HolidayRepository } from '@src/modules/holiday/repository/holiday.repository';
+import { MotivationRepository } from '@src/modules/motivation/repository/motivation.repository';
+import { SlackInteractiveService } from '@src/modules/slack/slack.interactive.service';
 
 @Injectable()
 export class MotivationService {
-  private readonly botAccessToken = process.env.BOT_USER_OAUTH_ACCESS_TOKEN;
-  private readonly webClient = new WebClient(this.botAccessToken);
   private readonly logger: Logger = new Logger(this.constructor.name);
   constructor(
-    @InjectRepository(User) private userRepository: Repository<User>,
-    @InjectRepository(Motivation)
-    private motivationRepository: Repository<Motivation>,
-    @InjectRepository(Holiday) private holidayRepository: Repository<Holiday>,
+    private readonly userRepository: UserRepository,
+    private readonly motivationRepository: MotivationRepository,
+    private readonly holidayRepository: HolidayRepository,
+    private readonly slackInteractiveService: SlackInteractiveService,
   ) {}
 
   @Cron('*/10 * * * 1-5', {
     timeZone: 'Asia/Seoul',
   })
-  async sendMotivation(): Promise<void> {
+  private async sendMotivation(): Promise<void> {
     const holiday = await this.holidayRepository.findOne({
       where: { date: dayjs().format('YYYYMMDD') },
     });
@@ -39,11 +38,7 @@ export class MotivationService {
       if (time !== user.pushTime) return;
       const candidates = this.weightedRandom(user);
       const category = this.getRandomCategory(candidates);
-      const motivation = await this.getMotivation(
-        motivationList,
-        category,
-        user.modernText,
-      );
+      const motivation = await this.getMotivation(motivationList, category, user.modernText);
       const contents = motivation.contents;
       count++;
       try {
@@ -56,7 +51,7 @@ export class MotivationService {
     if (count) this.logger.log(`${count}명에게 메시지 전송 완료.`);
   }
 
-  weightedRandom(user: User): Map<CategoryType, number> {
+  private weightedRandom(user: User): Map<CategoryType, number> {
     const target = new Map<CategoryType, number>();
     target.set(CategoryType.동기부여, user.motivation);
     target.set(CategoryType.응원, user.cheering);
@@ -80,7 +75,7 @@ export class MotivationService {
     return new Map(candidatesArray);
   }
 
-  getRandomCategory = (candidates: Map<CategoryType, number>): CategoryType => {
+  private getRandomCategory(candidates: Map<CategoryType, number>): CategoryType {
     // 1. 랜덤 기준점 설정
     const pivot = Math.random();
 
@@ -93,31 +88,19 @@ export class MotivationService {
       }
     }
     return null;
-  };
-  private async getMotivation(
-    motivationList: Motivation[],
-    category: CategoryType,
-    modernText: boolean,
-  ) {
-    const motivations = motivationList.filter(
-      (item) => item.category === category,
-    );
-    if (modernText)
-      motivations.push(
-        ...motivations.filter((item) => item.category === CategoryType.기타),
-      );
+  }
+
+  private async getMotivation(motivationList: Motivation[], category: CategoryType, modernText: boolean) {
+    const motivations = motivationList.filter((item) => item.category === category);
+    if (modernText) motivations.push(...motivations.filter((item) => item.category === CategoryType.기타));
     return motivations[Math.floor(Math.random() * motivations.length)];
   }
 
-  async postMessage(
-    channel: string,
-    name: string,
-    contents,
-  ): Promise<ChatPostMessageResponse> {
-    return await this.webClient.chat.postMessage({
-      text: `${name}. 오늘의 메시지가 도착했어요. 오늘 하루도 힘내세요!
->${contents}`,
+  private async postMessage(channel: string, name: string, contents): Promise<ChatPostMessageResponse> {
+    return await this.slackInteractiveService.postMessage(
       channel,
-    });
+      `${name}. 오늘의 메시지가 도착했어요. 오늘 하루도 힘내세요!
+>${contents}`,
+    );
   }
 }
