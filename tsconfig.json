@@ -26,6 +26,12 @@
       ],
       "@lib/notion/*": [
         "libs/notion/src/*"
+      ],
+      "@lib/openai": [
+        "libs/openai/src"
+      ],
+      "@lib/openai/*": [
+        "libs/openai/src/*"
       ]
     }
   }

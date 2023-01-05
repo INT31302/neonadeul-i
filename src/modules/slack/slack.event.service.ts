@@ -8,6 +8,7 @@ import { NotionService } from '@lib/notion';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { isNil } from '@nestjs/common/utils/shared.utils';
+import { OpenaiService } from '@lib/openai';
 
 @Injectable()
 export class SlackEventService {
@@ -17,6 +18,7 @@ export class SlackEventService {
     @InjectRepository(User) private userRepository: Repository<User>,
     private readonly slackInteractiveService: SlackInteractiveService,
     private readonly notionService: NotionService,
+    private readonly openaiService: OpenaiService,
     @InjectSlackClient()
     private readonly slack: SlackClient,
   ) {}
@@ -80,11 +82,14 @@ export class SlackEventService {
   async sendMessage(event: any): Promise<ChatPostMessageResponse> {
     let message = await this.notionService.searchQueryByName(event.text, NotionType.EASTER_EGG);
     const user = await this.userRepository.findOneBy({ id: event.user });
-    if (isNil(message))
-      return await this.slackInteractiveService.postMessage(
-        user.channelId,
-        '안녕하세요! 너나들이의 자세한 내용은 좌측 상단의 홈 탭을 참고해주세요!',
-      );
+    if (isNil(message)) {
+      message = await this.openaiService.sendMessage(event.text);
+      return await this.slackInteractiveService.postMessage(user.channelId, message);
+      // return await this.slackInteractiveService.postMessage(
+      //   user.channelId,
+      //   '안녕하세요! 너나들이의 자세한 내용은 좌측 상단의 홈 탭을 참고해주세요!',
+      // );
+    }
     message = message.replace(/\${name}/gi, user.name);
     return await this.slackInteractiveService.postMessage(user.channelId, message);
   }

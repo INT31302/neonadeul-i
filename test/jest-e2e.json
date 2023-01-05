@@ -12,6 +12,8 @@
   },
   "moduleNameMapper": {
     "@lib/notion/(.*)": "<rootDir>/../libs/notion/src/$1",
-    "@lib/notion": "<rootDir>/../libs/notion/src"
+    "@lib/notion": "<rootDir>/../libs/notion/src",
+    "@lib/openai/(.*)": "<rootDir>/../libs/openai/src/$1",
+    "@lib/openai": "<rootDir>/../libs/openai/src"
   }
 }

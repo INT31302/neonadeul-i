@@ -15,6 +15,15 @@
       "compilerOptions": {
         "tsConfigPath": "libs/notion/tsconfig.lib.json"
       }
+    },
+    "openai": {
+      "type": "library",
+      "root": "libs/openai",
+      "entryFile": "index",
+      "sourceRoot": "libs/openai/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/openai/tsconfig.lib.json"
+      }
     }
   }
 }
