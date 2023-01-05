@@ -23,6 +23,7 @@ export class SlackController {
   // event-api
   @SlackEventHandler('message')
   async onMessage({ event }: any): Promise<ChatPostMessageResponse> {
+    console.log(event);
     if (this.slackEventService.isDMChannel(event)) return;
     if (this.slackEventService.isBot(event)) return;
     if (event.text) {
