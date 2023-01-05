@@ -9,12 +9,19 @@ module.exports = {
         npmPublish: false,
       },
     ],
+    [
+      'semantic-release-heroku',
+      {
+        branches: ['main'],
+        npmVersion: false,
+        tarballDir: './dist',
+      },
+    ],
     '@semantic-release/github',
     [
       '@semantic-release/git',
       {
-        message:
-          'chore(release): ${nextRelease.version} [no ci]\n\n${nextRelease.notes}',
+        message: 'chore(release): ${nextRelease.version} [no ci]\n\n${nextRelease.notes}',
       },
     ],
   ],
