@@ -3,6 +3,7 @@ import { NotionConfig } from '@lib/notion/notion.config';
 import { Client } from '@notionhq/client';
 import { NotionType } from '@lib/notion/notion.type';
 import { QueryDatabaseResponse } from '@notionhq/client/build/src/api-endpoints';
+import { isNil } from '@nestjs/common/utils/shared.utils';
 
 @Injectable()
 export class NotionService {
@@ -21,6 +22,7 @@ export class NotionService {
         },
       },
     });
+    if (isNil(response.results[0])) return null;
     return response.results[0]['properties']['텍스트']['rich_text'][0]['plain_text'];
   }
 }
