@@ -21,5 +21,4 @@ jobs:
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: npm run semantic-release
