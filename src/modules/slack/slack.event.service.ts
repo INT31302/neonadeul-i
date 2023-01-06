@@ -90,7 +90,7 @@ export class SlackEventService {
         user.channelId,
         '너나들이가 입력중... (답변이  작성되면 수정됩니다.)',
       );
-      this.client.emit('openai', { ts, channelId: user.channelId, message });
+      this.client.emit<SlackRedisType>('openai', { ts, channel: user.channelId, message: event.text });
 
       return;
       // return this.slackInteractiveService.updateMessage(user.channelId, message, ts);
