@@ -86,10 +86,7 @@ export class SlackEventService {
     let message = await this.notionService.searchQueryByName(event.text, NotionType.EASTER_EGG);
     const user = await this.userRepository.findOneBy({ id: event.user });
     if (isNil(message)) {
-      const { ts } = await this.slackInteractiveService.postMessage(
-        user.channelId,
-        '너나들이가 입력중... (답변이  작성되면 수정됩니다.)',
-      );
+      const { ts } = await this.slackInteractiveService.postMessage(user.channelId, '너나들이가 입력중...');
       this.client.emit<SlackRedisType>('openai', { ts, channel: user.channelId, message: event.text });
 
       return;
