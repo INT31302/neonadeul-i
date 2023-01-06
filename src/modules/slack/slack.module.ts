@@ -26,8 +26,10 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
         name: 'REDIS',
         transport: Transport.REDIS,
         options: {
-          host: 'redis-eleit.cdb.ntruss.com',
-          port: 6379,
+          host: process.env.REDIS_HOST,
+          port: Number(process.env.REDIS_PORT),
+          username: process.env.REDIS_USER,
+          password: process.env.REDIS_PASSWORD,
         },
       },
     ]),

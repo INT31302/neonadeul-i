@@ -1,4 +1,4 @@
-import { Controller, Inject } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { CategoryType } from '@src/modules/motivation/movitation.type';
 import {
   SlackEventHandler,
@@ -10,7 +10,7 @@ import { SlackInteractiveService } from '@src/modules/slack/slack.interactive.se
 import { SlackEventService } from '@src/modules/slack/slack.event.service';
 import { ACTION_ID } from '@src/modules/slack/slack.constants';
 import { ChatPostMessageResponse, ChatUpdateResponse, ViewsPublishResponse } from '@slack/web-api';
-import { EventPattern } from '@nestjs/microservices';
+import { Ctx, MessagePattern, Payload, RedisContext } from '@nestjs/microservices';
 import { SlackRedisType } from '@src/modules/slack/slack.types';
 
 @Controller('slack-event')
@@ -22,10 +22,11 @@ export class SlackController {
     private readonly slackEventService: SlackEventService,
   ) {}
 
-  @EventPattern('openai')
-  async handleUserCreated(data: SlackRedisType): Promise<ChatUpdateResponse> {
+  @MessagePattern('openai')
+  async updateMessageEvent(@Payload() data: SlackRedisType, @Ctx() context: RedisContext): Promise<ChatUpdateResponse> {
     return await this.slackEventService.updateMessage(data);
   }
+
   // event-api
   @SlackEventHandler('message')
   async onMessage({ event }: any): Promise<ChatPostMessageResponse> {

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Scope } from '@nestjs/common';
 import { SlackInteractiveService } from '@src/modules/slack/slack.interactive.service';
 import { ChatPostMessageResponse, ChatUpdateResponse, UsersInfoResponse, ViewsPublishResponse } from '@slack/web-api';
 import { User } from '@src/modules/user/entities/user.entity';
@@ -12,7 +12,7 @@ import { OpenaiService } from '@lib/openai';
 import { ClientProxy } from '@nestjs/microservices';
 import { SlackRedisType } from '@src/modules/slack/slack.types';
 
-@Injectable()
+@Injectable({ scope: Scope.REQUEST })
 export class SlackEventService {
   private readonly logger: Logger = new Logger(this.constructor.name);
 
@@ -90,7 +90,7 @@ export class SlackEventService {
         user.channelId,
         '너나들이가 입력중... (답변이  작성되면 수정됩니다.)',
       );
-      this.client.emit<number>('openai', { ts, channelId: user.channelId, message });
+      this.client.send('openai', { ts, channelId: user.channelId, message });
 
       return;
       // return this.slackInteractiveService.updateMessage(user.channelId, message, ts);
