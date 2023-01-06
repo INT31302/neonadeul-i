@@ -9,6 +9,14 @@ module.exports = {
         npmPublish: false,
       },
     ],
+    [
+      'semantic-release-heroku',
+      {
+        branches: ['main'],
+        npmVersion: false,
+        tarballDir: './dist',
+      },
+    ],
     '@semantic-release/github',
     [
       '@semantic-release/git',
