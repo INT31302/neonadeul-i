@@ -4,21 +4,15 @@ import { ConfigFactory, registerAs } from '@nestjs/config';
 const DatabaseConfigKey = 'database';
 
 interface DatabaseConfigs {
-  host: string;
-  port: number;
-  database: string;
-  user: string;
-  password: string;
+  url: string;
+  sync: boolean;
 }
 
 //
 const DatabaseConfig = registerAs<DatabaseConfigs, ConfigFactory<DatabaseConfigs>>(DatabaseConfigKey, () => {
   return {
-    host: process.env.DB_HOST || 'localhost',
-    port: Number.parseInt(process.env.DB_PORT || '3306'),
-    database: process.env.DB_DATABASE || 'test',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
+    url: process.env.CLEARDB_DATABASE_URL || '',
+    sync: process.env.DB_SYNC === 'true',
   };
 });
 

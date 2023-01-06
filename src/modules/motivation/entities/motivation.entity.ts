@@ -19,7 +19,7 @@ export class Motivation {
     comment: '카테고리',
     enum: CategoryType,
     default: CategoryType.기타,
-    type: 'integer',
+    type: 'enum',
   })
   category: CategoryType;
 }

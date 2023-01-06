@@ -44,24 +44,20 @@ const DatabaseModule = Module.forRootAsync({
   useFactory: (config: ConfigService): TypeOrmModuleOptions => {
     const { isProduction } = config.get<AppConfigs>(AppConfigKey);
 
-    const { host, port, database, user, password } = config.get<DatabaseConfigs>(DatabaseConfigKey);
+    const { url, sync } = config.get<DatabaseConfigs>(DatabaseConfigKey);
 
     return {
-      type: 'postgres',
+      type: 'mysql',
       autoLoadEntities: true,
       namingStrategy: new SnakeNamingStrategy(),
-      synchronize: false,
+      synchronize: sync,
       //
       // logging level
       logging: isProduction === true ? ['info'] : ['query', 'log', 'info', 'error'],
       ssl: {
         rejectUnauthorized: false,
       },
-      host: host,
-      port: port,
-      username: user,
-      password: password,
-      database: database,
+      url: url,
       migrationsRun: false,
       migrationsTableName: 'migration',
       migrations: [__dirname + '/migrations/*.js'],
