@@ -7,6 +7,7 @@ import { SlackEventService } from '@src/modules/slack/slack.event.service';
 import { ConfigModule } from '@nestjs/config';
 import { User } from '@src/modules/user/entities/user.entity';
 import { OpenaiModule } from '@lib/openai';
+import { ClientsModule, Transport } from '@nestjs/microservices';
 
 @Module({
   imports: [
@@ -20,6 +21,16 @@ import { OpenaiModule } from '@lib/openai';
       secret_key: process.env.OPENAI_API_KEY,
       organization_id: process.env.OPENAI_ORGANIZATION_ID,
     }),
+    ClientsModule.register([
+      {
+        name: 'REDIS',
+        transport: Transport.REDIS,
+        options: {
+          host: 'redis-eleit.cdb.ntruss.com',
+          port: 6379,
+        },
+      },
+    ]),
   ],
   controllers: [SlackController],
   providers: [SlackInteractiveService, SlackEventService],

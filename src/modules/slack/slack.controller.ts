@@ -1,4 +1,4 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Inject } from '@nestjs/common';
 import { CategoryType } from '@src/modules/motivation/movitation.type';
 import {
   SlackEventHandler,
@@ -9,7 +9,9 @@ import {
 import { SlackInteractiveService } from '@src/modules/slack/slack.interactive.service';
 import { SlackEventService } from '@src/modules/slack/slack.event.service';
 import { ACTION_ID } from '@src/modules/slack/slack.constants';
-import { ChatPostMessageResponse, ViewsPublishResponse } from '@slack/web-api';
+import { ChatPostMessageResponse, ChatUpdateResponse, ViewsPublishResponse } from '@slack/web-api';
+import { EventPattern } from '@nestjs/microservices';
+import { SlackRedisType } from '@src/modules/slack/slack.types';
 
 @Controller('slack-event')
 @SlackEventListener()
@@ -20,13 +22,17 @@ export class SlackController {
     private readonly slackEventService: SlackEventService,
   ) {}
 
+  @EventPattern('openai')
+  async handleUserCreated(data: SlackRedisType): Promise<ChatUpdateResponse> {
+    return await this.slackEventService.updateMessage(data);
+  }
   // event-api
   @SlackEventHandler('message')
   async onMessage({ event }: any): Promise<ChatPostMessageResponse> {
     if (this.slackEventService.isDMChannel(event)) return;
     if (this.slackEventService.isBot(event)) return;
     if (event.text) {
-      await this.slackEventService.sendMessage(event);
+      return this.slackEventService.sendMessage(event);
     }
   }
 

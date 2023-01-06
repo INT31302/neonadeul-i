@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { SlackInteractiveService } from '@src/modules/slack/slack.interactive.service';
-import { ChatPostMessageResponse, UsersInfoResponse, ViewsPublishResponse } from '@slack/web-api';
+import { ChatPostMessageResponse, ChatUpdateResponse, UsersInfoResponse, ViewsPublishResponse } from '@slack/web-api';
 import { User } from '@src/modules/user/entities/user.entity';
 import { InjectSlackClient, SlackClient } from 'nestjs-slack-listener';
 import { NotionType } from '@lib/notion/notion.type';
@@ -9,7 +9,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { isNil } from '@nestjs/common/utils/shared.utils';
 import { OpenaiService } from '@lib/openai';
-import { channel } from 'diagnostics_channel';
+import { ClientProxy } from '@nestjs/microservices';
+import { SlackRedisType } from '@src/modules/slack/slack.types';
 
 @Injectable()
 export class SlackEventService {
@@ -22,6 +23,7 @@ export class SlackEventService {
     private readonly openaiService: OpenaiService,
     @InjectSlackClient()
     private readonly slack: SlackClient,
+    @Inject('REDIS') private client: ClientProxy,
   ) {}
 
   /**
@@ -88,8 +90,10 @@ export class SlackEventService {
         user.channelId,
         '너나들이가 입력중... (답변이  작성되면 수정됩니다.)',
       );
-      message = await this.openaiService.sendMessage(event.text);
-      return await this.slackInteractiveService.updateMessage(user.channelId, message, ts);
+      this.client.emit<number>('openai', { ts, channelId: user.channelId, message });
+
+      return;
+      // return this.slackInteractiveService.updateMessage(user.channelId, message, ts);
       // return await this.slackInteractiveService.postMessage(
       //   user.channelId,
       //   '안녕하세요! 너나들이의 자세한 내용은 좌측 상단의 홈 탭을 참고해주세요!',
@@ -97,5 +101,10 @@ export class SlackEventService {
     }
     message = message.replace(/\${name}/gi, user.name);
     return await this.slackInteractiveService.postMessage(user.channelId, message);
+  }
+
+  async updateMessage({ ts, message, channel }: SlackRedisType): Promise<ChatUpdateResponse> {
+    const result = await this.openaiService.sendMessage(message);
+    return this.slackInteractiveService.updateMessage(channel, result, ts);
   }
 }
