@@ -11,6 +11,8 @@ import { Repository } from 'typeorm';
 import { Holiday } from '@src/modules/holiday/entities/holiday.entity';
 import * as utc from 'dayjs/plugin/utc';
 import * as timezone from 'dayjs/plugin/timezone';
+import { NotionService } from '@lib/notion';
+import { NotionType } from '@lib/notion/notion.type';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -23,12 +25,15 @@ export class MotivationService {
     @InjectRepository(Motivation) private motivationRepository: Repository<Motivation>,
     @InjectRepository(Holiday) private holidayRepository: Repository<Holiday>,
     private readonly slackInteractiveService: SlackInteractiveService,
+    private readonly notionService: NotionService,
   ) {}
 
   @Cron('*/10 * * * 1-5', {
     timeZone: 'Asia/Seoul',
   })
   private async sendMotivation(): Promise<void> {
+    await this.sendEventMessage();
+
     const holiday = await this.holidayRepository.findOne({
       where: { date: dayjs().format('YYYYMMDD') },
     });
@@ -78,6 +83,28 @@ export class MotivationService {
     candidatesArray.sort((a, b) => a[1] - b[1]);
 
     return new Map(candidatesArray);
+  }
+
+  /**
+   * 1주년 메시지 발송
+   * 2023-01-13 11:00 기준 구독자에게 전체 발송
+   */
+  private async sendEventMessage() {
+    const now = dayjs().tz('Asia/Seoul');
+    if (now.year() === 2023 && now.month() === 0 && now.date() === 13 && now.hour() === 11 && now.minute() === 0) {
+      const message = await this.notionService.searchQueryByName(process.env.FIRST_YEAR_MESSAGE, NotionType.EASTER_EGG);
+      const userList = await this.userRepository.find({
+        where: { isSubscribe: true },
+      });
+      userList.map(async (user) => {
+        try {
+          await this.postMessage(user.channelId, user.name, message);
+        } catch (e) {
+          this.logger.error(`${user.name} 오류`);
+          throw e;
+        }
+      });
+    }
   }
 
   private getRandomCategory(candidates: Map<CategoryType, number>): CategoryType {
