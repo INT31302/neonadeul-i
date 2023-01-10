@@ -13,7 +13,7 @@ import * as utc from 'dayjs/plugin/utc';
 import * as timezone from 'dayjs/plugin/timezone';
 import { NotionService } from '@lib/notion';
 import { NotionType } from '@lib/notion/notion.type';
-import * as PostPosition from 'josa-js';
+import { isEndWithConsonant } from '@src/modules/common/utils';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -100,7 +100,7 @@ export class MotivationService {
       });
       userList.map(async (user) => {
         let newMessage = message.replace(/\${name}/gi, user.name);
-        newMessage = newMessage.replace(/\${josa}/gi, PostPosition(user.name, '을/를'));
+        newMessage = newMessage.replace(/\${josa}/gi, isEndWithConsonant(user.name) ? '을' : '를');
         try {
           await this.postMessage(user.channelId, user.name, newMessage);
         } catch (e) {
