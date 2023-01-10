@@ -111,7 +111,7 @@ export class SlackEventService {
       if (e instanceof Error) {
         this.logger.error(e.message, e.stack);
       }
-      result = '⚠️너나들이가 답변하기엔 어려운 질문이에요. 만일 다시 시도해도 이 답변을 얻는다면 다른 질문을 해주세요!';
+      result = '⚠️너나들이가 많은 사람들의 때문에 너무 바빠요. 1분 뒤에 다시 시도해주세요!';
     }
     return this.slackInteractiveService.updateMessage(channel, result, ts);
   }
