@@ -13,6 +13,7 @@ import * as utc from 'dayjs/plugin/utc';
 import * as timezone from 'dayjs/plugin/timezone';
 import { NotionService } from '@lib/notion';
 import { NotionType } from '@lib/notion/notion.type';
+import * as PostPosition from 'josa-js';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -93,12 +94,15 @@ export class MotivationService {
     const now = dayjs().tz('Asia/Seoul');
     if (now.year() === 2023 && now.month() === 0 && now.date() === 13 && now.hour() === 11 && now.minute() === 0) {
       const message = await this.notionService.searchQueryByName(process.env.FIRST_YEAR_MESSAGE, NotionType.EASTER_EGG);
+
       const userList = await this.userRepository.find({
         where: { isSubscribe: true },
       });
       userList.map(async (user) => {
+        let newMessage = message.replace(/\${name}/gi, user.name);
+        newMessage = newMessage.replace(/\${josa}/gi, PostPosition(user.name, '을/를'));
         try {
-          await this.postMessage(user.channelId, user.name, message);
+          await this.postMessage(user.channelId, user.name, newMessage);
         } catch (e) {
           this.logger.error(`${user.name} 오류`);
           throw e;

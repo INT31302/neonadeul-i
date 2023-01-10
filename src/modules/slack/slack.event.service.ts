@@ -11,6 +11,7 @@ import { isNil } from '@nestjs/common/utils/shared.utils';
 import { OpenaiService } from '@lib/openai';
 import { ClientProxy } from '@nestjs/microservices';
 import { SlackRedisType } from '@src/modules/slack/slack.types';
+import * as PostPosition from 'josa-js';
 
 @Injectable()
 export class SlackEventService {
@@ -97,6 +98,8 @@ export class SlackEventService {
       // );
     }
     message = message.replace(/\${name}/gi, user.name);
+    message = message.replace(/\${josa}/gi, PostPosition(user.name, '을/를'));
+
     return await this.slackInteractiveService.postMessage(user.channelId, message);
   }
 
