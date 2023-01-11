@@ -111,7 +111,7 @@ export class SlackEventService {
       if (e instanceof Error) {
         this.logger.error(e.message, e.stack);
       }
-      result = '⚠️너나들이가 많은 사람들의 때문에 너무 바빠요. 1분 뒤에 다시 시도해주세요!';
+      result = '⚠️너나들이가 많은 사람들의 요청으로 인해 너무 바빠요. 1분 뒤에 다시 시도해주세요!';
     }
     return this.slackInteractiveService.updateMessage(channel, result, ts);
   }

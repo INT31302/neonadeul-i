@@ -301,6 +301,48 @@ export const createHomeTemplate = (
           type: 'header',
           text: {
             type: 'plain_text',
+            text: '글귀 추천하기',
+            emoji: true,
+          },
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'plain_text',
+            text: '아래 버튼을 눌러 글귀를 추천할 수 있습니다.',
+            emoji: true,
+          },
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'plain_text',
+            text: '익명으로 요청되니 편하게 신청해주세요😉',
+            emoji: true,
+          },
+        },
+        {
+          type: 'actions',
+          elements: [
+            {
+              type: 'button',
+              text: {
+                type: 'plain_text',
+                text: '추천 하기',
+                emoji: true,
+              },
+              value: 'message_suggest_modal_open',
+              action_id: ACTION_ID.MESSAGE_SUGGEST_MODAL_OPEN,
+            },
+          ],
+        },
+        {
+          type: 'divider',
+        },
+        {
+          type: 'header',
+          text: {
+            type: 'plain_text',
             text: '건의하기',
             emoji: true,
           },
@@ -330,5 +372,85 @@ export const createHomeTemplate = (
         },
       ],
     },
+  };
+};
+
+export const getModal = () => {
+  return {
+    title: {
+      type: 'plain_text',
+      text: '글귀 추천하기',
+    },
+    submit: {
+      type: 'plain_text',
+      text: 'Submit',
+    },
+    blocks: [
+      {
+        type: 'input',
+        block_id: 'edit-ticket-desc',
+        label: {
+          type: 'plain_text',
+          text: '글귀',
+        },
+        element: {
+          type: 'plain_text_input',
+          multiline: true,
+          action_id: 'message_suggest_text',
+          initial_value: '너나들이에게 새로운 글귀를 추천해주세요!',
+        },
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: 'Pick an item from the dropdown list',
+        },
+        accessory: {
+          type: 'static_select',
+          placeholder: {
+            type: 'plain_text',
+            text: 'Select an item',
+            emoji: true,
+          },
+          options: [
+            {
+              text: {
+                type: 'plain_text',
+                text: '*동기부여*',
+                emoji: true,
+              },
+              value: 'motivation',
+            },
+            {
+              text: {
+                type: 'plain_text',
+                text: '*응원*',
+                emoji: true,
+              },
+              value: 'cheering',
+            },
+            {
+              text: {
+                type: 'plain_text',
+                text: '*위로*',
+                emoji: true,
+              },
+              value: 'consolation',
+            },
+            {
+              text: {
+                type: 'plain_text',
+                text: '*현대인 글귀*',
+                emoji: true,
+              },
+              value: 'modern',
+            },
+          ],
+          action_id: 'message_suggest_category',
+        },
+      },
+    ],
+    type: 'modal',
   };
 };

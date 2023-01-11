@@ -96,4 +96,8 @@ export class SlackController {
 
     return this.slackInteractiveService.updatePreference(userId, CategoryType.위로, value);
   }
+  @SlackInteractivityHandler(ACTION_ID.MESSAGE_SUGGEST_MODAL_OPEN)
+  openMessageSuggestModalOpen(payload: any) {
+    console.log(payload);
+  }
 }
