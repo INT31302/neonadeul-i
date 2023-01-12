@@ -21,6 +21,7 @@
     "semantic-release": "semantic-release"
   },
   "dependencies": {
+    "@int31302/nestjs-slack-listener": "^1.1.0",
     "@nestjs/axios": "^1.0.1",
     "@nestjs/common": "^9.2.1",
     "@nestjs/config": "^2.2.0",
@@ -40,7 +41,6 @@
     "graphql": "16.0.0",
     "ioredis": "^5.2.4",
     "mysql": "^2.18.1",
-    "nestjs-slack-listener": "^1.0.5",
     "openai": "^3.1.0",
     "pg": "^8.8.0",
     "redis": "^4.5.1",

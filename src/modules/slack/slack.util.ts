@@ -1,4 +1,4 @@
-import { PlainTextOption, ViewsPublishArguments } from '@slack/web-api';
+import { ModalView, PlainTextOption, ViewsPublishArguments } from '@slack/web-api';
 import { ACTION_ID } from '@src/modules/slack/slack.constants';
 
 export const getValuesSelect = (): PlainTextOption[] => {
@@ -328,11 +328,11 @@ export const createHomeTemplate = (
               type: 'button',
               text: {
                 type: 'plain_text',
-                text: '추천 하기',
+                text: '추천하기',
                 emoji: true,
               },
               value: 'message_suggest_modal_open',
-              action_id: ACTION_ID.MESSAGE_SUGGEST_MODAL_OPEN,
+              action_id: ACTION_ID.MOTIVATION_SUGGEST_MODAL_OPEN,
             },
           ],
         },
@@ -375,82 +375,85 @@ export const createHomeTemplate = (
   };
 };
 
-export const getModal = () => {
+export const getModal = (): ModalView => {
   return {
+    type: 'modal',
+    callback_id: ACTION_ID.MOTIVATION_SUGGEST,
     title: {
       type: 'plain_text',
-      text: '글귀 추천하기',
+      text: '글귀 추천',
     },
     submit: {
       type: 'plain_text',
-      text: 'Submit',
+      text: '제출',
     },
     blocks: [
       {
         type: 'input',
-        block_id: 'edit-ticket-desc',
+        block_id: 'motivation_suggest_text_block',
         label: {
           type: 'plain_text',
-          text: '글귀',
+          text: '내용',
         },
         element: {
           type: 'plain_text_input',
+          action_id: 'motivation_suggest_text',
           multiline: true,
-          action_id: 'message_suggest_text',
-          initial_value: '너나들이에게 새로운 글귀를 추천해주세요!',
+          placeholder: {
+            type: 'plain_text',
+            text: '너나들이에게 새로운 글귀를 추천해주세요!',
+            emoji: true,
+          },
         },
       },
       {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: 'Pick an item from the dropdown list',
-        },
-        accessory: {
+        type: 'input',
+        block_id: 'motivation_suggest_category_block',
+        dispatch_action: true,
+        element: {
           type: 'static_select',
           placeholder: {
             type: 'plain_text',
-            text: 'Select an item',
-            emoji: true,
+            text: '카테고리를 선택해주세요.',
           },
           options: [
             {
               text: {
                 type: 'plain_text',
-                text: '*동기부여*',
-                emoji: true,
+                text: '동기부여',
               },
               value: 'motivation',
             },
             {
               text: {
                 type: 'plain_text',
-                text: '*응원*',
-                emoji: true,
+                text: '응원',
               },
               value: 'cheering',
             },
             {
               text: {
                 type: 'plain_text',
-                text: '*위로*',
-                emoji: true,
+                text: '위로',
               },
               value: 'consolation',
             },
             {
               text: {
                 type: 'plain_text',
-                text: '*현대인 글귀*',
-                emoji: true,
+                text: '현대인 글귀',
               },
               value: 'modern',
             },
           ],
-          action_id: 'message_suggest_category',
+          action_id: 'motivation_suggest_category',
+        },
+        label: {
+          type: 'plain_text',
+          text: '카테고리',
+          emoji: true,
         },
       },
     ],
-    type: 'modal',
   };
 };

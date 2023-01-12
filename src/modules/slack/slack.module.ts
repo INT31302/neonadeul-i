@@ -16,6 +16,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
     NotionModule.register({
       notionToken: process.env.NOTION_TOKEN,
       easterEggDataBaseId: process.env.EASTER_EGG_DB,
+      motivationSuggestDataBaseId: process.env.MOTIVATION_SUGGEST_DB,
     }),
     OpenaiModule.register({
       secret_key: process.env.OPENAI_API_KEY,

@@ -11,7 +11,7 @@ import { HolidayModule } from '@src/modules/holiday/holiday.module';
 import ConfigModule from '@src/config/config.module';
 import { APP_FILTER } from '@nestjs/core';
 import { HttpExceptionFilter } from '@src/filter/http-exception.filter';
-import { SlackModule as SlackListenerModule } from 'nestjs-slack-listener';
+import { SlackModule as SlackListenerModule } from '@int31302/nestjs-slack-listener';
 
 @Module({
   imports: [

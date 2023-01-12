@@ -7,5 +7,6 @@ export enum ACTION_ID {
   CHEERING_SCORE = 'cheeringScore',
   MOTIVATION_SCORE = 'motivationScore',
   CONSOLATION_SCORE = 'consolationScore',
-  MESSAGE_SUGGEST_MODAL_OPEN = 'messageSuggestModalOpen',
+  MOTIVATION_SUGGEST_MODAL_OPEN = 'motivationSuggestModalOpen',
+  MOTIVATION_SUGGEST = 'motivationSuggest',
 }

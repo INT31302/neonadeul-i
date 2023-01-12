@@ -1,9 +1,14 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { SlackInteractiveService } from '@src/modules/slack/slack.interactive.service';
-import { ChatPostMessageResponse, ChatUpdateResponse, UsersInfoResponse, ViewsPublishResponse } from '@slack/web-api';
+import {
+  ChatPostMessageResponse,
+  ChatUpdateResponse,
+  UsersInfoResponse,
+  View,
+  ViewsOpenResponse,
+  ViewsPublishResponse,
+} from '@slack/web-api';
 import { User } from '@src/modules/user/entities/user.entity';
-import { InjectSlackClient, SlackClient } from 'nestjs-slack-listener';
-import { NotionType } from '@lib/notion/notion.type';
 import { NotionService } from '@lib/notion';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -12,6 +17,7 @@ import { OpenaiService } from '@lib/openai';
 import { ClientProxy } from '@nestjs/microservices';
 import { SlackRedisType } from '@src/modules/slack/slack.types';
 import { isEndWithConsonant } from '@src/modules/common/utils';
+import { InjectSlackClient, SlackClient } from '@int31302/nestjs-slack-listener';
 
 @Injectable()
 export class SlackEventService {
@@ -84,18 +90,12 @@ export class SlackEventService {
    * @param event
    */
   async sendMessage(event: any): Promise<ChatPostMessageResponse> {
-    let message = await this.notionService.searchQueryByName(event.text, NotionType.EASTER_EGG);
+    let message = await this.notionService.searchEasterEgg(event.text);
     const user = await this.userRepository.findOneBy({ id: event.user });
     if (isNil(message)) {
       const { ts } = await this.slackInteractiveService.postMessage(user.channelId, '너나들이가 입력중...');
       this.client.emit<SlackRedisType>('openai', { ts, channel: user.channelId, message: event.text });
-
       return;
-      // return this.slackInteractiveService.updateMessage(user.channelId, message, ts);
-      // return await this.slackInteractiveService.postMessage(
-      //   user.channelId,
-      //   '안녕하세요! 너나들이의 자세한 내용은 좌측 상단의 홈 탭을 참고해주세요!',
-      // );
     }
     message = message.replace(/\${name}/gi, user.name);
     message = message.replace(/\${josa}/gi, isEndWithConsonant(user.name) ? '을' : '를');
@@ -103,6 +103,12 @@ export class SlackEventService {
     return await this.slackInteractiveService.postMessage(user.channelId, message);
   }
 
+  /**
+   * 채팅 기능 중 openai 답변이 작성되면 이전 답장 수정
+   * @param ts
+   * @param message
+   * @param channel
+   */
   async updateMessage({ ts, message, channel }: SlackRedisType): Promise<ChatUpdateResponse> {
     let result: string;
     try {
@@ -114,5 +120,17 @@ export class SlackEventService {
       result = '⚠️너나들이가 많은 사람들의 요청으로 인해 너무 바빠요. 1분 뒤에 다시 시도해주세요!';
     }
     return this.slackInteractiveService.updateMessage(channel, result, ts);
+  }
+
+  /**
+   * vie
+   * @param triggerId
+   * @param view
+   */
+  async viewOpen(triggerId: string, view: View): Promise<ViewsOpenResponse> {
+    return await this.slack.views.open({
+      trigger_id: triggerId,
+      view,
+    });
   }
 }

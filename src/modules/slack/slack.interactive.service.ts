@@ -3,11 +3,13 @@ import { createHomeTemplate } from '@src/modules/slack/slack.util';
 import { CategoryType } from '@src/modules/motivation/movitation.type';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { NotionService } from '@lib/notion';
-import { InjectSlackClient, SlackClient } from 'nestjs-slack-listener';
 import { ChatPostMessageResponse, ViewsPublishArguments, ViewsPublishResponse } from '@slack/web-api';
 import { User } from '@src/modules/user/entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { InjectSlackClient, SlackClient } from '@int31302/nestjs-slack-listener';
+import * as dayjs from 'dayjs';
+import { NotionType } from '@lib/notion/notion.type';
 
 @Injectable()
 export class SlackInteractiveService {
@@ -222,5 +224,35 @@ export class SlackInteractiveService {
    */
   async publishView(view: ViewsPublishArguments): Promise<ViewsPublishResponse> {
     return await this.slack.views.publish(view);
+  }
+
+  /**
+   *
+   * @param userId
+   * @param message
+   * @param category
+   */
+  async onMessageSuggest(userId: string, message: string, category: string) {
+    const user = await this.userRepository.findOneBy({ id: userId });
+    const categoryType =
+      category === 'motivation'
+        ? CategoryType['동기부여']
+        : category === 'cheering'
+        ? CategoryType['응원']
+        : category === 'consolation'
+        ? CategoryType['위로']
+        : CategoryType['기타'];
+    await this.notionService.createPage(
+      dayjs().format('YYYY-MM-DD HH:mm:ss'),
+      message,
+      categoryType,
+      NotionType.SUGGEST,
+    );
+    const result = await this.postMessage(user.channelId, `${user.name}. 소중한 글귀 추천 감사해요!`);
+    if (!result.ok) {
+      await this.postErrorMessage(user.channelId);
+      new Error(result.error);
+    }
+    return result;
   }
 }

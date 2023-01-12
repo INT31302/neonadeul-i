@@ -9,14 +9,8 @@ import { SlackInteractiveService } from '@src/modules/slack/slack.interactive.se
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Holiday } from '@src/modules/holiday/entities/holiday.entity';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
 import { NotionService } from '@lib/notion';
-import { NotionType } from '@lib/notion/notion.type';
 import { isEndWithConsonant } from '@src/modules/common/utils';
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
 
 @Injectable()
 export class MotivationService {
@@ -29,39 +23,89 @@ export class MotivationService {
     private readonly notionService: NotionService,
   ) {}
 
+  /**
+   *
+   * @private
+   */
+  @Cron('0 0 0 * * *', {
+    timeZone: 'Asia/Seoul',
+  })
+  private async createConfirmMotivation() {
+    try {
+      const response = await this.notionService.searchConfirmMotivation();
+
+      if (response.results.length === 0) {
+        this.logger.log('승인된 추천 글귀가 없습니다.');
+        return;
+      }
+
+      const makeEntityList = (resultList) => {
+        return resultList.map((data) => {
+          return this.motivationRepository.create({
+            contents: data['properties']['글귀']['rich_text'][0]['plain_text'],
+            category: CategoryType[data['properties']['카테고리']['select']['name'] as string],
+          });
+        });
+      };
+
+      const entityList: Motivation[] = makeEntityList(response.results);
+      await this.motivationRepository.save(entityList);
+      this.logger.log(`추천 글귀 추가 성공 (data:${JSON.stringify(entityList)})`);
+      await this.notionService.updateMotivationPage(response);
+    } catch (e) {
+      if (e instanceof Error) {
+        this.logger.error('추천 글귀 추가 과정 중 문제가 발생했습니다.');
+        throw e;
+      }
+    }
+  }
+
+  /**
+   *
+   * @private
+   */
   @Cron('*/10 * * * 1-5', {
     timeZone: 'Asia/Seoul',
   })
   private async sendMotivation(): Promise<void> {
-    await this.sendEventMessage();
-
-    const holiday = await this.holidayRepository.findOne({
-      where: { date: dayjs().format('YYYYMMDD') },
-    });
-    if (holiday) return;
-    const time = dayjs().tz('Asia/Seoul').format('HH:mm');
-    const userList = await this.userRepository.find({
-      where: { isSubscribe: true, pushTime: time },
-    });
-    if (userList.length === 0) return;
-    const motivationList = await this.motivationRepository.find();
-    let count = 0;
-    userList.map(async (user) => {
-      const candidates = this.weightedRandom(user);
-      const category = this.getRandomCategory(candidates);
-      const motivation = await this.getMotivation(motivationList, category, user.modernText);
-      const contents = motivation.contents;
-      count++;
-      try {
-        await this.postMessage(user.channelId, user.name, contents);
-      } catch (e) {
-        this.logger.error(`${user.name} 오류`);
-        throw e;
-      }
-    });
-    if (count) this.logger.log(`${count}명에게 메시지 전송 완료.`);
+    try {
+      const holiday = await this.holidayRepository.findOne({
+        where: { date: dayjs().format('YYYYMMDD') },
+      });
+      if (holiday) return;
+      const time = dayjs().format('HH:mm');
+      const userList = await this.userRepository.find({
+        where: { isSubscribe: true, pushTime: time },
+      });
+      if (userList.length === 0) return;
+      const motivationList = await this.motivationRepository.find();
+      let count = 0;
+      userList.map(async (user) => {
+        const candidates = this.weightedRandom(user);
+        const category = this.getRandomCategory(candidates);
+        const motivation = await this.getMotivation(motivationList, category, user.modernText);
+        const contents = motivation.contents;
+        count++;
+        try {
+          await this.postMessage(user.channelId, user.name, contents);
+        } catch (e) {
+          this.logger.error(`${user.name} 오류`);
+          throw e;
+        }
+      });
+      if (count) this.logger.log(`${count}명에게 메시지 전송 완료.`);
+      await this.sendEventMessage();
+    } catch (e) {
+      if (e instanceof Error) this.logger.error('글귀 발송 과정 중 문제가 발생했습니다.');
+      throw e;
+    }
   }
 
+  /**
+   *
+   * @param user
+   * @private
+   */
   private weightedRandom(user: User): Map<CategoryType, number> {
     const target = new Map<CategoryType, number>();
     target.set(CategoryType.동기부여, user.motivation);
@@ -86,31 +130,6 @@ export class MotivationService {
     return new Map(candidatesArray);
   }
 
-  /**
-   * 1주년 메시지 발송
-   * 2023-01-13 11:00 기준 구독자에게 전체 발송
-   */
-  private async sendEventMessage() {
-    const now = dayjs().tz('Asia/Seoul');
-    if (now.year() === 2023 && now.month() === 0 && now.date() === 13 && now.hour() === 11 && now.minute() === 0) {
-      const message = await this.notionService.searchQueryByName(process.env.FIRST_YEAR_MESSAGE, NotionType.EASTER_EGG);
-
-      const userList = await this.userRepository.find({
-        where: { isSubscribe: true },
-      });
-      userList.map(async (user) => {
-        let newMessage = message.replace(/\${name}/gi, user.name);
-        newMessage = newMessage.replace(/\${josa}/gi, isEndWithConsonant(user.name) ? '을' : '를');
-        try {
-          await this.postMessage(user.channelId, user.name, newMessage);
-        } catch (e) {
-          this.logger.error(`${user.name} 오류`);
-          throw e;
-        }
-      });
-    }
-  }
-
   private getRandomCategory(candidates: Map<CategoryType, number>): CategoryType {
     // 1. 랜덤 기준점 설정
     const pivot = Math.random();
@@ -126,6 +145,13 @@ export class MotivationService {
     return null;
   }
 
+  /**
+   *
+   * @param motivationList
+   * @param category
+   * @param modernText
+   * @private
+   */
   private async getMotivation(motivationList: Motivation[], category: CategoryType, modernText: boolean) {
     const motivations = motivationList.filter((item) => item.category === category);
     if (modernText) motivations.push(...motivations.filter((item) => item.category === CategoryType.기타));
@@ -138,5 +164,30 @@ export class MotivationService {
       `${name}. 오늘의 메시지가 도착했어요. 오늘 하루도 힘내세요!
 >${contents}`,
     );
+  }
+
+  /**
+   * 1주년 메시지 발송
+   * 2023-01-13 11:00 기준 구독자에게 전체 발송
+   */
+  private async sendEventMessage() {
+    const now = dayjs();
+    if (now.year() === 2023 && now.month() === 0 && now.date() === 13 && now.hour() === 11 && now.minute() === 0) {
+      const message = await this.notionService.searchEasterEgg(process.env.FIRST_YEAR_MESSAGE);
+
+      const userList = await this.userRepository.find({
+        where: { isSubscribe: true },
+      });
+      userList.map(async (user) => {
+        let newMessage = message.replace(/\${name}/gi, user.name);
+        newMessage = newMessage.replace(/\${josa}/gi, isEndWithConsonant(user.name) ? '을' : '를');
+        try {
+          await this.postMessage(user.channelId, user.name, newMessage);
+        } catch (e) {
+          this.logger.error(`${user.name} 오류`);
+          throw e;
+        }
+      });
+    }
   }
 }

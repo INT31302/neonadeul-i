@@ -18,8 +18,10 @@ import { ConfigModule } from '@nestjs/config';
     NotionModule.register({
       notionToken: process.env.NOTION_TOKEN,
       easterEggDataBaseId: process.env.EASTER_EGG_DB,
+      motivationSuggestDataBaseId: process.env.MOTIVATION_SUGGEST_DB,
     }),
   ],
   providers: [MotivationService],
+  exports: [MotivationService],
 })
 export class MotivationModule {}
