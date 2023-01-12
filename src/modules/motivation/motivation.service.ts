@@ -4,7 +4,7 @@ import { User } from '@src/modules/user/entities/user.entity';
 import { Motivation } from '@src/modules/motivation/entities/motivation.entity';
 import * as dayjs from 'dayjs';
 import { CategoryType } from '@src/modules/motivation/movitation.type';
-import { Cron } from '@nestjs/schedule';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { SlackInteractiveService } from '@src/modules/slack/slack.interactive.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -27,7 +27,7 @@ export class MotivationService {
    *
    * @private
    */
-  @Cron('0 0 0 * * *', {
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, {
     timeZone: 'Asia/Seoul',
   })
   private async createConfirmMotivation() {

@@ -3,6 +3,7 @@ import * as dayjs from 'dayjs';
 import { User } from '@src/modules/user/entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class UserService {
@@ -10,6 +11,13 @@ export class UserService {
 
   constructor(@InjectRepository(User) private userRepository: Repository<User>) {}
 
+  /**
+   *
+   */
+  @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT, { timeZone: 'Asia/Seoul' })
+  async resetJerry() {
+    await this.userRepository.update({ jerry: true }, { jerry: false });
+  }
   /**
    * 사용자 정보를 생성합니다.
    * @param name

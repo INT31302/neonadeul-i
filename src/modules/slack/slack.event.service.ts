@@ -97,6 +97,12 @@ export class SlackEventService {
       this.client.emit<SlackRedisType>('openai', { ts, channel: user.channelId, message: event.text });
       return;
     }
+
+    if (event.text !== '힌트' && !user.jerry) {
+      user.jerry = true;
+      await this.userRepository.save(user);
+    }
+
     message = message.replace(/\${name}/gi, user.name);
     message = message.replace(/\${josa}/gi, isEndWithConsonant(user.name) ? '을' : '를');
 
