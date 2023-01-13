@@ -122,6 +122,7 @@ export class SlackInteractiveService {
     const user = await this.userService.findOne(userId);
     if (!user) return;
     await this.userService.save({ ...user, pushTime: selectedTime });
+    this.logger.log(`${user.name} 메시지 수신 시간 변경 (${selectedTime})`);
     return await this.postMessage(user.channelId, `메시지 수신 시간을 변경되었습니다. (${selectedTime})`);
   }
 
