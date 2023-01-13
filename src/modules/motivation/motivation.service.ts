@@ -91,7 +91,7 @@ export class MotivationService {
         await this.slackInteractiveService.postMessage(
           user.channelId,
           `${user.name}. 오늘의 메시지가 도착했어요. 오늘 하루도 힘내세요!
->${motivation.contents}`,
+>>>${motivation.contents}`,
         );
       });
       if (count > 0) this.logger.log(`${count}명에게 메시지 전송 완료. (${time})`);
