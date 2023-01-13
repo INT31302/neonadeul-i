@@ -10,21 +10,20 @@ import {
 } from '@slack/web-api';
 import { User } from '@src/modules/user/entities/user.entity';
 import { NotionService } from '@lib/notion';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { isNil } from '@nestjs/common/utils/shared.utils';
 import { OpenaiService } from '@lib/openai';
 import { ClientProxy } from '@nestjs/microservices';
 import { SlackRedisType } from '@src/modules/slack/slack.types';
 import { isEndWithConsonant } from '@src/modules/common/utils';
 import { InjectSlackClient, SlackClient } from '@int31302/nestjs-slack-listener';
+import { UserService } from '@src/modules/user/user.service';
 
 @Injectable()
 export class SlackEventService {
   private readonly logger: Logger = new Logger(this.constructor.name);
 
   constructor(
-    @InjectRepository(User) private userRepository: Repository<User>,
+    private readonly userService: UserService,
     private readonly slackInteractiveService: SlackInteractiveService,
     private readonly notionService: NotionService,
     private readonly openaiService: OpenaiService,
@@ -67,9 +66,9 @@ export class SlackEventService {
     const response = await this.getUserInfo(event.user);
     const displayName = response.user.profile.display_name;
     const name = displayName.includes('(') ? displayName.split('(')[1].split(')')[0] : displayName;
-    const user = await this.userRepository.findOneBy({ id: event.user });
+    const user = await this.userService.findOne(event.user);
     if (!user) {
-      return await this.userRepository.save({
+      return await this.userService.save({
         id: event.user,
         name,
         channelId: event.channel,
@@ -86,12 +85,15 @@ export class SlackEventService {
   }
 
   /**
-   *
+   * 유저가 너나들이 메시지를 보낼 시 실행되는 함수
+   * 이스터에그를 입력할 경우 user.jerry 활성화
+   * 아닐 경우 openai api 를 이용한 챗봇 기능 사용
+   * 챗봇의 경우 api 가 느려서 임시 메시지를 발송하고 수정하는 방식으로 진행
    * @param event
    */
   async sendMessage(event: any): Promise<ChatPostMessageResponse> {
     let message = await this.notionService.searchEasterEgg(event.text);
-    const user = await this.userRepository.findOneBy({ id: event.user });
+    const user = await this.userService.findOne(event.user);
     if (isNil(message)) {
       const { ts } = await this.slackInteractiveService.postMessage(user.channelId, '너나들이가 입력중...');
       this.client.emit<SlackRedisType>('openai', { ts, channel: user.channelId, message: event.text });
@@ -100,7 +102,8 @@ export class SlackEventService {
 
     if (event.text !== '힌트' && !user.jerry) {
       user.jerry = true;
-      await this.userRepository.save(user);
+      await this.userService.save(user);
+      this.logger.log(`${user.name} 제리 활성화`);
     }
 
     message = message.replace(/\${name}/gi, user.name);
@@ -129,7 +132,7 @@ export class SlackEventService {
   }
 
   /**
-   * vie
+   * trigger 기반으로 view 를 엽니다.
    * @param triggerId
    * @param view
    */

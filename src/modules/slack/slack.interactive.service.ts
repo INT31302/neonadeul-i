@@ -5,17 +5,16 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { NotionService } from '@lib/notion';
 import { ChatPostMessageResponse, ViewsPublishArguments, ViewsPublishResponse } from '@slack/web-api';
 import { User } from '@src/modules/user/entities/user.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { InjectSlackClient, SlackClient } from '@int31302/nestjs-slack-listener';
 import * as dayjs from 'dayjs';
 import { NotionType } from '@lib/notion/notion.type';
+import { UserService } from '@src/modules/user/user.service';
 
 @Injectable()
 export class SlackInteractiveService {
-  private readonly loggger: Logger = new Logger(this.constructor.name);
+  private readonly logger: Logger = new Logger(this.constructor.name);
   constructor(
-    @InjectRepository(User) private userRepository: Repository<User>,
+    private readonly userService: UserService,
     private readonly notionService: NotionService,
     @InjectSlackClient()
     private readonly slack: SlackClient,
@@ -29,10 +28,8 @@ export class SlackInteractiveService {
     timeZone: 'Asia/Seoul',
   })
   async cleanUpUser(): Promise<User[]> {
-    const userList = await this.userRepository.find({
-      where: { isSubscribe: false },
-    });
-    return await this.userRepository.remove(userList);
+    const userList = await this.userService.findUnSubscriber();
+    return await this.userService.removeList(userList);
   }
 
   /**
@@ -47,6 +44,12 @@ export class SlackInteractiveService {
     });
   }
 
+  /**
+   * 메시지 수정
+   * @param channel
+   * @param message
+   * @param ts
+   */
   async updateMessage(channel: string, message: string, ts: string) {
     return await this.slack.chat.update({ text: message, ts, channel });
   }
@@ -65,15 +68,15 @@ export class SlackInteractiveService {
    * @param userId
    */
   async subscribe(userId: string): Promise<ChatPostMessageResponse> {
-    const user = await this.userRepository.findOneBy({ id: userId });
+    const user = await this.userService.findOne(userId);
     if (user.isSubscribe) {
       return await this.postMessage(user.channelId, '앗! 이미 등록되어 있어요.');
     }
     user.isSubscribe = true;
-    await this.userRepository.save(user);
+    await this.userService.save(user);
+    this.logger.log(`${user.name} 구독 완료`);
     const homeTemplate = this.createView(user);
     await this.slack.views.publish(homeTemplate);
-    console.log(`${user.name} 등록완료`);
     const result = await this.postMessage(
       user.channelId,
       `${user.name} 어서오세요. 정상적으로 등록이 완료되었습니다.🥰`,
@@ -82,6 +85,7 @@ export class SlackInteractiveService {
       await this.postErrorMessage(user.channelId);
       new Error(result.error);
     }
+
     return result;
   }
 
@@ -92,18 +96,16 @@ export class SlackInteractiveService {
    * @param userId
    */
   async unsubscribe(userId: string): Promise<ChatPostMessageResponse> {
-    const user = await this.userRepository.findOneBy({ id: userId });
-    const name = user.name;
+    const user = await this.userService.findOne(userId);
     if (!user || !user.isSubscribe) {
       return await this.postMessage(user.channelId, '삭제 가능한 유저 정보가 없어요.');
     }
     const homeTemplate = createHomeTemplate(user.id, '11:00', false, 0, 0, 0, false);
     await this.slack.views.publish(homeTemplate);
     user.isSubscribe = false;
-    await this.userRepository.save(user);
-    console.log(`${name} 삭제완료`);
-
-    const result = await this.postMessage(user.channelId, `${name}, 아쉽지만 다음에 또 봬요.😌`);
+    await this.userService.save(user);
+    this.logger.log(`${user.name} 구독 취소`);
+    const result = await this.postMessage(user.channelId, `${user.name}, 아쉽지만 다음에 또 봬요.😌`);
     if (!result.ok) {
       await this.postErrorMessage(user.channelId);
       new Error(result.error);
@@ -117,9 +119,9 @@ export class SlackInteractiveService {
    * @param selectedTime
    */
   async setTime(userId: any, selectedTime: any): Promise<ChatPostMessageResponse> {
-    const user = await this.userRepository.findOneBy({ id: userId });
+    const user = await this.userService.findOne(userId);
     if (!user) return;
-    await this.userRepository.save({ ...user, pushTime: selectedTime });
+    await this.userService.save({ ...user, pushTime: selectedTime });
     return await this.postMessage(user.channelId, `메시지 수신 시간을 변경되었습니다. (${selectedTime})`);
   }
 
@@ -129,12 +131,13 @@ export class SlackInteractiveService {
    * @param userId
    */
   async modernOn(userId: string): Promise<ChatPostMessageResponse> {
-    const user = await this.userRepository.findOneBy({ id: userId });
+    const user = await this.userService.findOne(userId);
     if (user.modernText) {
       return await this.postMessage(user.channelId, '앗! 이미 수신 허용 했어요.');
     }
     user.modernText = true;
-    await this.userRepository.save(user);
+    await this.userService.save(user);
+    this.logger.log(`${user.name} 현대인 글귀 구독 완료`);
     const homeTemplate = this.createView(user);
     await this.publishView(homeTemplate);
     const result = await this.postMessage(user.channelId, `현대인 글귀 구독 상태가 수신 상태로 변경 됐어요!`);
@@ -151,12 +154,13 @@ export class SlackInteractiveService {
    * @param userId
    */
   async modernOff(userId: string): Promise<ChatPostMessageResponse> {
-    const user = await this.userRepository.findOneBy({ id: userId });
+    const user = await this.userService.findOne(userId);
     if (!user.modernText) {
       return await this.postMessage(user.channelId, '앗! 이미 수신 거부 했어요.');
     }
     user.modernText = false;
-    await this.userRepository.save(user);
+    await this.userService.save(user);
+    this.logger.log(`${user.name} 현대인 글귀 구독 취소`);
     const homeTemplate = this.createView(user);
     await this.publishView(homeTemplate);
     const result = await this.postMessage(user.channelId, `현대인 글귀 구독 상태가 미수신 상태로 변경 됐어요!`);
@@ -174,7 +178,7 @@ export class SlackInteractiveService {
    * @param value
    */
   async updatePreference(userId: string, categoryType: CategoryType, value: number): Promise<ChatPostMessageResponse> {
-    const user = await this.userRepository.findOneBy({ id: userId });
+    const user = await this.userService.findOne(userId);
     switch (categoryType) {
       case CategoryType.동기부여:
         user.motivation = value;
@@ -186,9 +190,9 @@ export class SlackInteractiveService {
         user.consolation = value;
         break;
     }
-    await this.userRepository.save(user);
-    const homeTemplate = this.createView(user);
-    await this.publishView(homeTemplate);
+    await this.userService.save(user);
+    this.logger.log(`${user.name} 카테고리 선호도 값 변경(카테고리: ${CategoryType[categoryType]}, 값: ${value})`);
+    await this.publishView(this.createView(user));
     const result = await this.postMessage(
       user.channelId,
       `${CategoryType[categoryType]} 카테고리 선호도 값이 수정되었습니다.`,
@@ -227,13 +231,13 @@ export class SlackInteractiveService {
   }
 
   /**
-   *
+   * 추천 글귀 요청이 왔을 경우 Notion DB에 추가
    * @param userId
    * @param message
    * @param category
    */
   async onMessageSuggest(userId: string, message: string, category: string) {
-    const user = await this.userRepository.findOneBy({ id: userId });
+    const user = await this.userService.findOne(userId);
     const categoryType =
       category === 'motivation'
         ? CategoryType['동기부여']

@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as dayjs from 'dayjs';
 import { User } from '@src/modules/user/entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { DeepPartial } from 'typeorm/common/DeepPartial';
 
 @Injectable()
 export class UserService {
@@ -12,22 +12,19 @@ export class UserService {
   constructor(@InjectRepository(User) private userRepository: Repository<User>) {}
 
   /**
-   *
+   * 매달 1일 jerry 리셋
    */
   @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT, { timeZone: 'Asia/Seoul' })
-  async resetJerry() {
+  async resetJerry(): Promise<void> {
     await this.userRepository.update({ jerry: true }, { jerry: false });
+    this.logger.log('jerry 리셋 완료');
   }
   /**
    * 사용자 정보를 생성합니다.
-   * @param name
+   * @param user
    */
-  create(name: string): Promise<User> {
-    this.logger.debug(`create(name: ${name})`);
-    return this.userRepository.save({
-      name,
-      createdAt: dayjs(),
-    });
+  save(user: DeepPartial<User>): Promise<User> {
+    return this.userRepository.save(user);
   }
 
   /**
@@ -35,6 +32,24 @@ export class UserService {
    */
   findAll(): Promise<User[]> {
     return this.userRepository.find();
+  }
+
+  /**
+   *
+   * @param pushTime
+   */
+  findSubscriberOnPushTime(pushTime: string): Promise<User[]> {
+    return this.userRepository.find({
+      where: { isSubscribe: true, pushTime },
+    });
+  }
+  /**
+   * 미구독 상태의 유저 목록 조회
+   */
+  findUnSubscriber(): Promise<User[]> {
+    return this.userRepository.find({
+      where: { isSubscribe: false },
+    });
   }
 
   /**
@@ -47,11 +62,15 @@ export class UserService {
 
   /**
    * 사용자 정보를 제거합니다.
-   * @param id
    */
-  async remove(id: string): Promise<boolean> {
-    const entity = await this.userRepository.findOneByOrFail({ id });
-    await this.userRepository.softRemove(entity);
-    return true;
+  async remove(user: User): Promise<User> {
+    return this.userRepository.remove(user);
+  }
+
+  /**
+   * 사용자 정보 목록을 제거합니다.
+   */
+  async removeList(userList: User[]): Promise<User[]> {
+    return this.userRepository.remove(userList);
   }
 }
