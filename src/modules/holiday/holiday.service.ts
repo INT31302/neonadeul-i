@@ -1,12 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { UpdateHolidayDto } from './dto/update-holiday.dto';
 import * as dayjs from 'dayjs';
-import { Connection, Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { lastValueFrom } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { HolidayType } from '@src/modules/holiday/holiday.type';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Holiday } from '@src/modules/holiday/entities/holiday.entity';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class HolidayService {
@@ -14,18 +14,24 @@ export class HolidayService {
 
   constructor(
     private readonly httpService: HttpService,
-    private readonly connection: Connection,
+    private readonly dataSource: DataSource,
     @InjectRepository(Holiday) private holidayRepository: Repository<Holiday>,
   ) {}
 
   private async startTransaction() {
-    const queryRunner = await this.connection.createQueryRunner();
+    const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
     return queryRunner;
   }
 
-  async create() {
+  /**
+   * 1년에 한번씩 공휴일 저장
+   */
+  @Cron(CronExpression.EVERY_YEAR, {
+    timeZone: 'Asia/Seoul',
+  })
+  async create(): Promise<void> {
     const year = dayjs().year();
     const serviceKey = process.env.HOLIDAY_API_KEY;
     const items: HolidayType[] = await lastValueFrom(
@@ -49,22 +55,15 @@ export class HolidayService {
     } finally {
       await queryRunner.release();
     }
-    return 'This action adds a new holiday';
   }
 
-  findAll() {
-    return `This action returns all holiday`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} holiday`;
-  }
-
-  update(id: number, updateHolidayDto: UpdateHolidayDto) {
-    return `This action updates a #${id} holiday`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} holiday`;
+  /**
+   * 일자 기준 공휴일 조회
+   * @param date
+   */
+  findOne(date: string) {
+    return this.holidayRepository.findOne({
+      where: { date },
+    });
   }
 }
