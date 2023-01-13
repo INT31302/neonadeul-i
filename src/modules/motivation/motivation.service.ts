@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ChatPostMessageResponse } from '@slack/web-api';
 import { User } from '@src/modules/user/entities/user.entity';
 import { Motivation } from '@src/modules/motivation/entities/motivation.entity';
 import * as dayjs from 'dayjs';
@@ -8,17 +7,17 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { SlackInteractiveService } from '@src/modules/slack/slack.interactive.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Holiday } from '@src/modules/holiday/entities/holiday.entity';
 import { NotionService } from '@lib/notion';
-import { isEndWithConsonant } from '@src/modules/common/utils';
+import { UserService } from '@src/modules/user/user.service';
+import { HolidayService } from '@src/modules/holiday/holiday.service';
 
 @Injectable()
 export class MotivationService {
   private readonly logger: Logger = new Logger(this.constructor.name);
   constructor(
-    @InjectRepository(User) private userRepository: Repository<User>,
     @InjectRepository(Motivation) private motivationRepository: Repository<Motivation>,
-    @InjectRepository(Holiday) private holidayRepository: Repository<Holiday>,
+    private readonly userService: UserService,
+    private readonly holidayService: HolidayService,
     private readonly slackInteractiveService: SlackInteractiveService,
     private readonly notionService: NotionService,
   ) {}
@@ -61,7 +60,8 @@ export class MotivationService {
   }
 
   /**
-   *
+   * 평일 기준 10분마다 메시지 수신 대상자에 글귀 메시지를 발송합니다.
+   * 지정한 공휴일의 경우 발송하지 않습니다.
    * @private
    */
   @Cron('*/10 * * * 1-5', {
@@ -69,32 +69,34 @@ export class MotivationService {
   })
   private async sendMotivation(): Promise<void> {
     try {
-      const holiday = await this.holidayRepository.findOne({
-        where: { date: dayjs().format('YYYYMMDD') },
-      });
-      if (holiday) return;
+      const holiday = await this.holidayService.findOne(dayjs().format('YYYYMMDD'));
+      if (holiday) {
+        this.logger.log('공휴일이기 때문에 메시지 발송을 종료합니다.');
+      }
       const time = dayjs().format('HH:mm');
-      const userList = await this.userRepository.find({
-        where: { isSubscribe: true, pushTime: time },
-      });
-      if (userList.length === 0) return;
+      this.logger.log(`메시지 수신 대상자를 조회합니다. (${time})`);
+      const userList = await this.userService.findSubscriberOnPushTime(time);
+      if (userList.length === 0) {
+        this.logger.log(`메시지 수신 대상자가 없습니다. (${time})`);
+        return;
+      }
+      this.logger.log(`${userList.length}명의 메시지 수신 대상자가 존재합니다. (${time})`);
       const motivationList = await this.motivationRepository.find();
       let count = 0;
       userList.map(async (user) => {
         const candidates = this.weightedRandom(user);
         const category = this.getRandomCategory(candidates);
         const motivation = await this.getMotivation(motivationList, category, user.modernText);
-        const contents = motivation.contents;
         count++;
-        try {
-          await this.postMessage(user.channelId, user.name, contents);
-        } catch (e) {
-          this.logger.error(`${user.name} 오류`);
-          throw e;
-        }
+        await this.slackInteractiveService.postMessage(
+          user.channelId,
+          `${user.name}. 오늘의 메시지가 도착했어요. 오늘 하루도 힘내세요!
+>${motivation.contents}`,
+        );
       });
-      if (count) this.logger.log(`${count}명에게 메시지 전송 완료.`);
-      await this.sendEventMessage();
+      if (count > 0) this.logger.log(`${count}명에게 메시지 전송 완료. (${time})`);
+      // 이벤트 종료
+      // await this.sendEventMessage();
     } catch (e) {
       if (e instanceof Error) this.logger.error('글귀 발송 과정 중 문제가 발생했습니다.');
       throw e;
@@ -102,15 +104,15 @@ export class MotivationService {
   }
 
   /**
-   *
+   * 유저의 선호도 기반으로 가중치를 계산합니다.
    * @param user
    * @private
    */
   private weightedRandom(user: User): Map<CategoryType, number> {
     const target = new Map<CategoryType, number>();
-    target.set(CategoryType.동기부여, user.motivation);
-    target.set(CategoryType.응원, user.cheering);
-    target.set(CategoryType.위로, user.consolation);
+    target.set(CategoryType['동기부여'], user.motivation);
+    target.set(CategoryType['응원'], user.cheering);
+    target.set(CategoryType['위로'], user.consolation);
     // 1. 총 가중치 합 계산
     let totalWeight = 0;
     for (const item of target) {
@@ -130,6 +132,11 @@ export class MotivationService {
     return new Map(candidatesArray);
   }
 
+  /**
+   * 가중치 기반으로 카테고리를 선정합니다.
+   * @param candidates
+   * @private
+   */
   private getRandomCategory(candidates: Map<CategoryType, number>): CategoryType {
     // 1. 랜덤 기준점 설정
     const pivot = Math.random();
@@ -146,7 +153,8 @@ export class MotivationService {
   }
 
   /**
-   *
+   * 각 유저별 선정된 카테고리 기반으로 글귀를 필터링 후 랜덤으로 글귀를 선정합니다.
+   * 현대인 글귀는 필수로 포함됩니다.
    * @param motivationList
    * @param category
    * @param modernText
@@ -154,40 +162,32 @@ export class MotivationService {
    */
   private async getMotivation(motivationList: Motivation[], category: CategoryType, modernText: boolean) {
     const motivations = motivationList.filter((item) => item.category === category);
-    if (modernText) motivations.push(...motivations.filter((item) => item.category === CategoryType.기타));
+    if (modernText) motivations.push(...motivations.filter((item) => item.category === CategoryType['기타']));
     return motivations[Math.floor(Math.random() * motivations.length)];
   }
 
-  private async postMessage(channel: string, name: string, contents): Promise<ChatPostMessageResponse> {
-    return await this.slackInteractiveService.postMessage(
-      channel,
-      `${name}. 오늘의 메시지가 도착했어요. 오늘 하루도 힘내세요!
->${contents}`,
-    );
-  }
-
-  /**
-   * 1주년 메시지 발송
-   * 2023-01-13 11:00 기준 구독자에게 전체 발송
-   */
-  private async sendEventMessage() {
-    const now = dayjs();
-    if (now.year() === 2023 && now.month() === 0 && now.date() === 13 && now.hour() === 11 && now.minute() === 0) {
-      const message = await this.notionService.searchEasterEgg(process.env.FIRST_YEAR_MESSAGE);
-
-      const userList = await this.userRepository.find({
-        where: { isSubscribe: true },
-      });
-      userList.map(async (user) => {
-        let newMessage = message.replace(/\${name}/gi, user.name);
-        newMessage = newMessage.replace(/\${josa}/gi, isEndWithConsonant(user.name) ? '을' : '를');
-        try {
-          await this.postMessage(user.channelId, user.name, newMessage);
-        } catch (e) {
-          this.logger.error(`${user.name} 오류`);
-          throw e;
-        }
-      });
-    }
-  }
+  // 이벤트 종료
+  // /**
+  //  * 1주년 메시지 발송
+  //  * 2023-01-13 11:00 기준 구독자에게 전체 발송
+  // private async sendEventMessage() {
+  //   const now = dayjs();
+  //   if (now.year() === 2023 && now.month() === 0 && now.date() === 13 && now.hour() === 11 && now.minute() === 0) {
+  //     const message = await this.notionService.searchEasterEgg(process.env.FIRST_YEAR_MESSAGE);
+  //
+  //     const userList = await this.userRepository.find({
+  //       where: { isSubscribe: true },
+  //     });
+  //     userList.map(async (user) => {
+  //       let newMessage = message.replace(/\${name}/gi, user.name);
+  //       newMessage = newMessage.replace(/\${josa}/gi, isEndWithConsonant(user.name) ? '을' : '를');
+  //       try {
+  //         await this.slackInteractiveService.postMessage(user.channelId, newMessage);
+  //       } catch (e) {
+  //         this.logger.error(`${user.name} 오류`);
+  //         throw e;
+  //       }
+  //     });
+  //   }
+  // }*/
 }
