@@ -9,5 +9,6 @@ import { Holiday } from '@src/modules/holiday/entities/holiday.entity';
   imports: [HttpModule, TypeOrmModule.forFeature([Holiday])],
   controllers: [HolidayController],
   providers: [HolidayService],
+  exports: [HolidayService],
 })
 export class HolidayModule {}

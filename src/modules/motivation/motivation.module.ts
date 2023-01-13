@@ -4,15 +4,17 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { HttpModule } from '@nestjs/axios';
 import { SlackModule } from '@src/modules/slack/slack.module';
 import { Motivation } from '@src/modules/motivation/entities/motivation.entity';
-import { User } from '@src/modules/user/entities/user.entity';
-import { Holiday } from '@src/modules/holiday/entities/holiday.entity';
 import { NotionModule } from '@lib/notion';
 import { ConfigModule } from '@nestjs/config';
+import { UserModule } from '@src/modules/user/user.module';
+import { HolidayModule } from '@src/modules/holiday/holiday.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
-    TypeOrmModule.forFeature([User, Motivation, Holiday]),
+    TypeOrmModule.forFeature([Motivation]),
+    UserModule,
+    HolidayModule,
     HttpModule,
     SlackModule,
     NotionModule.register({
