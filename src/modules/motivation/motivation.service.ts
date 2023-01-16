@@ -82,19 +82,17 @@ export class MotivationService {
       }
       this.logger.log(`${userList.length}명의 메시지 수신 대상자가 존재합니다. (${time})`);
       const motivationList = await this.motivationRepository.find();
-      let count = 0;
       userList.map(async (user) => {
         const candidates = this.weightedRandom(user);
         const category = this.getRandomCategory(candidates);
         const motivation = await this.getMotivation(motivationList, category, user.modernText);
-        count++;
         await this.slackInteractiveService.postMessage(
           user.channelId,
           `${user.name}. 오늘의 메시지가 도착했어요. 오늘 하루도 힘내세요!
 >>>${motivation.contents}`,
         );
       });
-      if (count > 0) this.logger.log(`${count}명에게 메시지 전송 완료. (${time})`);
+      this.logger.log(`${userList.length}명에게 메시지 전송 완료. (${time})`);
       // 이벤트 종료
       // await this.sendEventMessage();
     } catch (e) {
