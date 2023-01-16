@@ -3,7 +3,12 @@ import { createHomeTemplate } from '@src/modules/slack/slack.util';
 import { CategoryType } from '@src/modules/motivation/movitation.type';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { NotionService } from '@lib/notion';
-import { ChatPostMessageResponse, ViewsPublishArguments, ViewsPublishResponse } from '@slack/web-api';
+import {
+  ChatPostMessageResponse,
+  ChatUpdateResponse,
+  ViewsPublishArguments,
+  ViewsPublishResponse,
+} from '@slack/web-api';
 import { User } from '@src/modules/user/entities/user.entity';
 import { InjectSlackClient, SlackClient } from '@int31302/nestjs-slack-listener';
 import * as dayjs from 'dayjs';
@@ -38,10 +43,15 @@ export class SlackInteractiveService {
    * @param message
    */
   async postMessage(channel: string, message: string): Promise<ChatPostMessageResponse> {
-    return await this.slack.chat.postMessage({
-      text: message,
-      channel,
-    });
+    try {
+      return await this.slack.chat.postMessage({
+        text: message,
+        channel,
+      });
+    } catch (e) {
+      this.logger.error('메시지 발송 중 문제가 발생했습니다.');
+      throw e;
+    }
   }
 
   /**
@@ -50,16 +60,29 @@ export class SlackInteractiveService {
    * @param message
    * @param ts
    */
-  async updateMessage(channel: string, message: string, ts: string) {
-    return await this.slack.chat.update({ text: message, ts, channel });
+  async updateMessage(channel: string, message: string, ts: string): Promise<ChatUpdateResponse> {
+    try {
+      return await this.slack.chat.update({ text: message, ts, channel });
+    } catch (e) {
+      this.logger.error('메시지 업데티ㅡ 중 문제가 발생했습니다.');
+      throw e;
+    }
   }
 
   /**
    * 에러 메시지 발송
    * @param channelId
    */
-  async postErrorMessage(channelId: string) {
-    await postMessage(channelId, '알 수 없는 오류가 발생하였습니다❗️');
+  async postErrorMessage(channelId: string): Promise<ChatPostMessageResponse> {
+    try {
+      return await this.slack.chat.postMessage({
+        text: '알 수 없는 오류가 발생하였습니다❗️',
+        channel: channelId,
+      });
+    } catch (e) {
+      this.logger.error('에러 메시지 발송 중 문제가 발생했습니다.');
+      throw e;
+    }
   }
 
   /**
