@@ -24,6 +24,15 @@
       "compilerOptions": {
         "tsConfigPath": "libs/openai/tsconfig.lib.json"
       }
+    },
+    "airtable": {
+      "type": "library",
+      "root": "libs/airtable",
+      "entryFile": "index",
+      "sourceRoot": "libs/airtable/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/airtable/tsconfig.lib.json"
+      }
     }
   }
 }

@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { createHomeTemplate } from '@src/modules/slack/slack.util';
 import { CategoryType } from '@src/modules/motivation/movitation.type';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { NotionService } from '@lib/notion';
 import {
   ChatPostMessageResponse,
   ChatUpdateResponse,
@@ -12,15 +11,15 @@ import {
 import { User } from '@src/modules/user/entities/user.entity';
 import { InjectSlackClient, SlackClient } from '@int31302/nestjs-slack-listener';
 import * as dayjs from 'dayjs';
-import { NotionType } from '@lib/notion/notion.type';
 import { UserService } from '@src/modules/user/user.service';
+import { AirtableService } from '@lib/airtable';
 
 @Injectable()
 export class SlackInteractiveService {
   private readonly logger: Logger = new Logger(this.constructor.name);
   constructor(
     private readonly userService: UserService,
-    private readonly notionService: NotionService,
+    private readonly airtableService: AirtableService,
     @InjectSlackClient()
     private readonly slack: SlackClient,
   ) {}
@@ -270,12 +269,7 @@ export class SlackInteractiveService {
         : category === 'consolation'
         ? CategoryType['위로']
         : CategoryType['기타'];
-    await this.notionService.createPage(
-      dayjs().format('YYYY-MM-DD HH:mm:ss'),
-      message,
-      categoryType,
-      NotionType.SUGGEST,
-    );
+    await this.airtableService.createSuggestRecord(dayjs().toISOString(), message, categoryType);
     const result = await this.postMessage(user.channelId, `${user.name}. 소중한 글귀 추천 감사해요!`);
     if (!result.ok) {
       await this.postErrorMessage(user.channelId);

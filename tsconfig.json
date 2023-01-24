@@ -32,6 +32,12 @@
       ],
       "@lib/openai/*": [
         "libs/openai/src/*"
+      ],
+      "@lib/airtable": [
+        "libs/airtable/src"
+      ],
+      "@lib/airtable/*": [
+        "libs/airtable/src/*"
       ]
     }
   }

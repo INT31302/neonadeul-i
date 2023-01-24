@@ -4,10 +4,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { HttpModule } from '@nestjs/axios';
 import { SlackModule } from '@src/modules/slack/slack.module';
 import { Motivation } from '@src/modules/motivation/entities/motivation.entity';
-import { NotionModule } from '@lib/notion';
 import { ConfigModule } from '@nestjs/config';
 import { UserModule } from '@src/modules/user/user.module';
 import { HolidayModule } from '@src/modules/holiday/holiday.module';
+import { AirtableModule } from '@lib/airtable';
 
 @Module({
   imports: [
@@ -17,11 +17,12 @@ import { HolidayModule } from '@src/modules/holiday/holiday.module';
     HolidayModule,
     HttpModule,
     SlackModule,
-    NotionModule.register({
+    AirtableModule.register({ apiKey: process.env.AIRTABLE_API_KEY, base: process.env.AIRTABLE_BASE }),
+    /*NotionModule.register({
       notionToken: process.env.NOTION_TOKEN,
       easterEggDataBaseId: process.env.EASTER_EGG_DB,
       motivationSuggestDataBaseId: process.env.MOTIVATION_SUGGEST_DB,
-    }),
+    }),*/
   ],
   providers: [MotivationService],
   exports: [MotivationService],
