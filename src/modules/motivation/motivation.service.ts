@@ -7,9 +7,10 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { SlackInteractiveService } from '@src/modules/slack/slack.interactive.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { NotionService } from '@lib/notion';
 import { UserService } from '@src/modules/user/user.service';
 import { HolidayService } from '@src/modules/holiday/holiday.service';
+import { AirtableService } from '@lib/airtable';
+import { FieldSet, Records } from 'airtable';
 
 @Injectable()
 export class MotivationService {
@@ -19,7 +20,7 @@ export class MotivationService {
     private readonly userService: UserService,
     private readonly holidayService: HolidayService,
     private readonly slackInteractiveService: SlackInteractiveService,
-    private readonly notionService: NotionService,
+    private readonly airtableService: AirtableService, // private readonly notionService: NotionService,
   ) {}
 
   /**
@@ -31,26 +32,26 @@ export class MotivationService {
   })
   private async createConfirmMotivation() {
     try {
-      const response = await this.notionService.searchConfirmMotivation();
+      const response = await this.airtableService.searchConfirmMotivation();
 
-      if (response.results.length === 0) {
+      if (response.length === 0) {
         this.logger.log('승인된 추천 글귀가 없습니다.');
         return;
       }
 
-      const makeEntityList = (resultList) => {
+      const makeEntityList = (resultList: Records<FieldSet>) => {
         return resultList.map((data) => {
           return this.motivationRepository.create({
-            contents: data['properties']['글귀']['rich_text'][0]['plain_text'],
-            category: CategoryType[data['properties']['카테고리']['select']['name'] as string],
+            contents: data.get('글귀') as string,
+            category: CategoryType[data.get('카테고리') as string],
           });
         });
       };
 
-      const entityList: Motivation[] = makeEntityList(response.results);
+      const entityList: Motivation[] = makeEntityList(response);
       await this.motivationRepository.save(entityList);
       this.logger.log(`추천 글귀 추가 성공 (data:${JSON.stringify(entityList)})`);
-      await this.notionService.updateMotivationPage(response);
+      await this.airtableService.updateMotivationPage(response);
     } catch (e) {
       if (e instanceof Error) {
         this.logger.error('추천 글귀 추가 과정 중 문제가 발생했습니다.');
@@ -69,9 +70,14 @@ export class MotivationService {
   })
   private async sendMotivation(): Promise<void> {
     try {
+      if (process.env.APP_ENV !== 'prod') {
+        this.logger.debug('운영환경이 아니기 때문에 종료합니다.');
+        return;
+      }
       const holiday = await this.holidayService.findOne(dayjs().format('YYYYMMDD'));
       if (holiday) {
         this.logger.log('공휴일이기 때문에 메시지 발송을 종료합니다.');
+        return;
       }
       const time = dayjs().format('HH:mm');
       this.logger.log(`메시지 수신 대상자를 조회합니다. (${time})`);
