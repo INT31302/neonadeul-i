@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { SlackInteractiveService } from '@src/modules/slack/slack.interactive.service';
+import { SlackInteractiveService } from '@src/modules/slack/service/slack.interactive.service';
 import {
   ChatPostMessageResponse,
   ChatUpdateResponse,
@@ -16,7 +16,7 @@ import { SlackRedisType } from '@src/modules/slack/slack.types';
 import { isEndWithConsonant } from '@src/modules/common/utils';
 import { InjectSlackClient, SlackClient } from '@int31302/nestjs-slack-listener';
 import { UserService } from '@src/modules/user/user.service';
-import { AirtableService } from '@lib/airtable';
+import { OnlineDatabaseInterfaceService } from '@lib/online-database-interface';
 
 @Injectable()
 export class SlackEventService {
@@ -25,7 +25,7 @@ export class SlackEventService {
   constructor(
     private readonly userService: UserService,
     private readonly slackInteractiveService: SlackInteractiveService,
-    private readonly airtableService: AirtableService,
+    private readonly onlineDatabaseInterfaceService: OnlineDatabaseInterfaceService,
     private readonly openaiService: OpenaiService,
     @InjectSlackClient()
     private readonly slack: SlackClient,
@@ -92,7 +92,7 @@ export class SlackEventService {
    * @param event
    */
   async sendMessage(event: any): Promise<ChatPostMessageResponse> {
-    let message = await this.airtableService.searchEasterEgg(event.text);
+    let message = await this.onlineDatabaseInterfaceService.searchEasterEgg(event.text);
     const user = await this.userService.findOne(event.user);
     if (isNil(message)) {
       const { ts } = await this.slackInteractiveService.postMessage(user.channelId, '너나들이가 입력중...');

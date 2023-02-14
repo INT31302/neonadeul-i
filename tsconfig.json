@@ -38,6 +38,12 @@
       ],
       "@lib/airtable/*": [
         "libs/airtable/src/*"
+      ],
+      "@lib/online-database-interface": [
+        "libs/online-database-interface/src"
+      ],
+      "@lib/online-database-interface/*": [
+        "libs/online-database-interface/src/*"
       ]
     }
   }

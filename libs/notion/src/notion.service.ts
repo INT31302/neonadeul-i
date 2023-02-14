@@ -10,9 +10,10 @@ import {
 import { isNil } from '@nestjs/common/utils/shared.utils';
 import { CategoryType } from '@src/modules/motivation/movitation.type';
 import { getMessageSuggestPage } from '@lib/notion/notion.util';
+import { OnlineDatabaseInterfaceService } from '@lib/online-database-interface';
 
 @Injectable()
-export class NotionService {
+export class NotionService implements OnlineDatabaseInterfaceService {
   private readonly logger: Logger = new Logger(this.constructor.name);
   private readonly notion: Client;
   constructor(@Inject(NotionConfig) private readonly configs: NotionConfig) {
@@ -47,20 +48,14 @@ export class NotionService {
    * @param date
    * @param message
    * @param category
-   * @param notionType
    */
-  async createPage(
-    date: string,
-    message: string,
-    category: CategoryType,
-    notionType: NotionType,
-  ): Promise<CreatePageResponse> {
+  async createSuggestRecord(date: string, message: string, category: CategoryType): Promise<CreatePageResponse> {
     try {
-      if (notionType === NotionType.SUGGEST) {
-        return await this.notion.pages.create(getMessageSuggestPage(date, message, category, this.getId(notionType)));
-      }
+      return await this.notion.pages.create(
+        getMessageSuggestPage(date, message, category, this.getId(NotionType.SUGGEST)),
+      );
     } catch (e) {
-      if (e instanceof Error) this.logger.error(`${notionType} Page 생성 과정 중 문제가 발생했습니다.`);
+      if (e instanceof Error) this.logger.error(`${NotionType.SUGGEST} Page 생성 과정 중 문제가 발생했습니다.`);
       throw e;
     }
   }
@@ -99,7 +94,7 @@ export class NotionService {
    * 추가된 추천 글귀에 체크 표시
    * @param response
    */
-  async updateMotivationPage(response: QueryDatabaseResponse): Promise<UpdatePageResponse[]> {
+  async updateMotivationRecord(response: QueryDatabaseResponse): Promise<UpdatePageResponse[]> {
     try {
       const promiseList: Promise<UpdatePageResponse>[] = response.results.map(({ id }) => {
         return this.notion.pages.update({ page_id: id, properties: { 추가됨: { checkbox: true } } });

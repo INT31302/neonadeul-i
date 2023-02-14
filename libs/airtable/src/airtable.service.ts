@@ -2,13 +2,13 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import * as Airtable from 'airtable';
 import { AirtableConfig } from '@lib/airtable/airtable.config';
 import { AirtableBase } from 'airtable/lib/airtable_base';
-import { isNil } from '@nestjs/common/utils/shared.utils';
 import { FieldSet, Records } from 'airtable';
 import Record from 'airtable/lib/record';
 import { CategoryType } from '@src/modules/motivation/movitation.type';
+import { OnlineDatabaseInterfaceService } from '@lib/online-database-interface';
 
 @Injectable()
-export class AirtableService {
+export class AirtableService implements OnlineDatabaseInterfaceService {
   private readonly logger: Logger = new Logger(this.constructor.name);
   private readonly airtableBase: AirtableBase;
   private readonly EASTER_EGG_TABLE_NAME = '이스터에그';
@@ -75,7 +75,7 @@ export class AirtableService {
    * 추가된 추천 글귀에 체크 표시
    * @param response
    */
-  async updateMotivationPage(response: Records<FieldSet>): Promise<Record<FieldSet>[]> {
+  async updateMotivationRecord(response: Records<FieldSet>): Promise<Record<FieldSet>[]> {
     try {
       const promiseList: Promise<Record<FieldSet>>[] = response.map(({ id }) => {
         return this.airtableBase.table(this.SUGGEST_TABLE_NAME).update(id, { 추가됨: true });

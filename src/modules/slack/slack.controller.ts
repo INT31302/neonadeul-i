@@ -1,7 +1,7 @@
-import { Controller, HttpCode } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { CategoryType } from '@src/modules/motivation/movitation.type';
-import { SlackInteractiveService } from '@src/modules/slack/slack.interactive.service';
-import { SlackEventService } from '@src/modules/slack/slack.event.service';
+import { SlackInteractiveService } from '@src/modules/slack/service/slack.interactive.service';
+import { SlackEventService } from '@src/modules/slack/service/slack.event.service';
 import { ACTION_ID } from '@src/modules/slack/slack.constants';
 import { ChatPostMessageResponse, ChatUpdateResponse, ViewsOpenResponse, ViewsPublishResponse } from '@slack/web-api';
 import { Ctx, MessagePattern, Payload, RedisContext } from '@nestjs/microservices';

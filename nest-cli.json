@@ -33,6 +33,15 @@
       "compilerOptions": {
         "tsConfigPath": "libs/airtable/tsconfig.lib.json"
       }
+    },
+    "online-database-interface": {
+      "type": "library",
+      "root": "libs/online-database-interface",
+      "entryFile": "index",
+      "sourceRoot": "libs/online-database-interface/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/online-database-interface/tsconfig.lib.json"
+      }
     }
   }
 }

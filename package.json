@@ -107,7 +107,8 @@
     "moduleNameMapper": {
       "^@lib/notion(|/.*)$": "<rootDir>/libs/notion/src/$1",
       "^@lib/openai(|/.*)$": "<rootDir>/libs/openai/src/$1",
-      "^@lib/airtable(|/.*)$": "<rootDir>/libs/airtable/src/$1"
+      "^@lib/airtable(|/.*)$": "<rootDir>/libs/airtable/src/$1",
+      "^@lib/online-database-interface(|/.*)$": "<rootDir>/libs/online-database-interface/src/$1"
     }
   },
   "repository": {

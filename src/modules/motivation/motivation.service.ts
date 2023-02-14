@@ -4,13 +4,13 @@ import { Motivation } from '@src/modules/motivation/entities/motivation.entity';
 import * as dayjs from 'dayjs';
 import { CategoryType } from '@src/modules/motivation/movitation.type';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { SlackInteractiveService } from '@src/modules/slack/slack.interactive.service';
+import { SlackInteractiveService } from '@src/modules/slack/service/slack.interactive.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserService } from '@src/modules/user/user.service';
 import { HolidayService } from '@src/modules/holiday/holiday.service';
-import { AirtableService } from '@lib/airtable';
 import { FieldSet, Records } from 'airtable';
+import { OnlineDatabaseInterfaceService } from '@lib/online-database-interface';
 
 @Injectable()
 export class MotivationService {
@@ -20,7 +20,7 @@ export class MotivationService {
     private readonly userService: UserService,
     private readonly holidayService: HolidayService,
     private readonly slackInteractiveService: SlackInteractiveService,
-    private readonly airtableService: AirtableService, // private readonly notionService: NotionService,
+    private readonly onlineDatabaseService: OnlineDatabaseInterfaceService,
   ) {}
 
   /**
@@ -32,7 +32,7 @@ export class MotivationService {
   })
   private async createConfirmMotivation() {
     try {
-      const response = await this.airtableService.searchConfirmMotivation();
+      const response = await this.onlineDatabaseService.searchConfirmMotivation();
 
       if (response.length === 0) {
         this.logger.log('승인된 추천 글귀가 없습니다.');
@@ -51,7 +51,7 @@ export class MotivationService {
       const entityList: Motivation[] = makeEntityList(response);
       await this.motivationRepository.save(entityList);
       this.logger.log(`추천 글귀 추가 성공 (data:${JSON.stringify(entityList)})`);
-      await this.airtableService.updateMotivationPage(response);
+      await this.onlineDatabaseService.updateMotivationRecord(response);
     } catch (e) {
       if (e instanceof Error) {
         this.logger.error('추천 글귀 추가 과정 중 문제가 발생했습니다.');

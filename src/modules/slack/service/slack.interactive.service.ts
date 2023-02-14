@@ -12,14 +12,14 @@ import { User } from '@src/modules/user/entities/user.entity';
 import { InjectSlackClient, SlackClient } from '@int31302/nestjs-slack-listener';
 import * as dayjs from 'dayjs';
 import { UserService } from '@src/modules/user/user.service';
-import { AirtableService } from '@lib/airtable';
+import { OnlineDatabaseInterfaceService } from '@lib/online-database-interface';
 
 @Injectable()
 export class SlackInteractiveService {
   private readonly logger: Logger = new Logger(this.constructor.name);
   constructor(
     private readonly userService: UserService,
-    private readonly airtableService: AirtableService,
+    private readonly onlineDatabaseInterfaceService: OnlineDatabaseInterfaceService,
     @InjectSlackClient()
     private readonly slack: SlackClient,
   ) {}
@@ -269,7 +269,7 @@ export class SlackInteractiveService {
         : category === 'consolation'
         ? CategoryType['위로']
         : CategoryType['기타'];
-    await this.airtableService.createSuggestRecord(dayjs().toISOString(), message, categoryType);
+    await this.onlineDatabaseInterfaceService.createSuggestRecord(dayjs().toISOString(), message, categoryType);
     const result = await this.postMessage(user.channelId, `${user.name}. 소중한 글귀 추천 감사해요!`);
     if (!result.ok) {
       await this.postErrorMessage(user.channelId);
