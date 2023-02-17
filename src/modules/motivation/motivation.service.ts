@@ -9,8 +9,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserService } from '@src/modules/user/user.service';
 import { HolidayService } from '@src/modules/holiday/holiday.service';
-import { FieldSet, Records } from 'airtable';
 import { OnlineDatabaseInterfaceService } from '@lib/online-database-interface';
+import { MotivationModel } from '@lib/online-database-interface/online-database-interface.type';
 
 @Injectable()
 export class MotivationService {
@@ -32,26 +32,26 @@ export class MotivationService {
   })
   private async createConfirmMotivation() {
     try {
-      const response = await this.onlineDatabaseService.searchConfirmMotivation();
+      const modelList = await this.onlineDatabaseService.searchConfirmMotivation();
 
-      if (response.length === 0) {
+      if (modelList.length === 0) {
         this.logger.log('승인된 추천 글귀가 없습니다.');
         return;
       }
 
-      const makeEntityList = (resultList: Records<FieldSet>) => {
-        return resultList.map((data) => {
+      const makeEntityList = (resultList: MotivationModel[]) => {
+        return resultList.map(({ contents, category }) => {
           return this.motivationRepository.create({
-            contents: data.get('글귀') as string,
-            category: CategoryType[data.get('카테고리') as string],
+            contents: contents,
+            category: CategoryType[category],
           });
         });
       };
 
-      const entityList: Motivation[] = makeEntityList(response);
+      const entityList: Motivation[] = makeEntityList(modelList);
       await this.motivationRepository.save(entityList);
       this.logger.log(`추천 글귀 추가 성공 (data:${JSON.stringify(entityList)})`);
-      await this.onlineDatabaseService.updateMotivationRecord(response);
+      await this.onlineDatabaseService.updateMotivationRecord(modelList);
     } catch (e) {
       if (e instanceof Error) {
         this.logger.error('추천 글귀 추가 과정 중 문제가 발생했습니다.');

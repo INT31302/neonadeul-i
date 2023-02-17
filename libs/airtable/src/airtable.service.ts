@@ -2,10 +2,11 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import * as Airtable from 'airtable';
 import { AirtableConfig } from '@lib/airtable/airtable.config';
 import { AirtableBase } from 'airtable/lib/airtable_base';
-import { FieldSet, Records } from 'airtable';
+import { FieldSet } from 'airtable';
 import Record from 'airtable/lib/record';
 import { CategoryType } from '@src/modules/motivation/movitation.type';
 import { OnlineDatabaseInterfaceService } from '@lib/online-database-interface';
+import { MotivationModel } from '@lib/online-database-interface/online-database-interface.type';
 
 @Injectable()
 export class AirtableService implements OnlineDatabaseInterfaceService {
@@ -42,11 +43,12 @@ export class AirtableService implements OnlineDatabaseInterfaceService {
   /**
    * 글귀 추천 record 추가
    */
-  async createSuggestRecord(date: string, message: string, category: CategoryType): Promise<Record<FieldSet>> {
+  async createSuggestRecord(date: string, message: string, category: CategoryType): Promise<boolean> {
     try {
-      return await this.airtableBase
+      await this.airtableBase
         .table(this.SUGGEST_TABLE_NAME)
         .create({ 날짜: date, 글귀: message, 카테고리: CategoryType[category] });
+      return true;
     } catch (e) {
       if (e instanceof Error) this.logger.error('글귀 추천 조회 과정 중 문제가 발생했습니다');
       throw e;
@@ -55,9 +57,9 @@ export class AirtableService implements OnlineDatabaseInterfaceService {
   /**
    * 관리자 승인을 받은 추천 글귀 중 추가 안된 글귀 조회
    */
-  async searchConfirmMotivation(): Promise<Records<FieldSet>> {
+  async searchConfirmMotivation(): Promise<MotivationModel[]> {
     try {
-      return await this.airtableBase
+      const dataList = await this.airtableBase
         .table(this.SUGGEST_TABLE_NAME)
         .select({
           cellFormat: 'json',
@@ -65,6 +67,14 @@ export class AirtableService implements OnlineDatabaseInterfaceService {
           filterByFormula: 'AND({관리자 승인} = 1, {추가됨} = 0)',
         })
         .all();
+
+      return dataList.map((data) => {
+        return {
+          id: data.id,
+          contents: data.get('글귀') as string,
+          category: data.get('카테고리') as string,
+        };
+      });
     } catch (e) {
       if (e instanceof Error) this.logger.error('글귀 추천 조회 과정 중 문제가 발생했습니다');
       throw e;
@@ -73,14 +83,15 @@ export class AirtableService implements OnlineDatabaseInterfaceService {
 
   /**
    * 추가된 추천 글귀에 체크 표시
-   * @param response
+   * @param modelList
    */
-  async updateMotivationRecord(response: Records<FieldSet>): Promise<Record<FieldSet>[]> {
+  async updateMotivationRecord(modelList: MotivationModel[]): Promise<boolean> {
     try {
-      const promiseList: Promise<Record<FieldSet>>[] = response.map(({ id }) => {
+      const promiseList: Promise<Record<FieldSet>>[] = modelList.map(({ id }) => {
         return this.airtableBase.table(this.SUGGEST_TABLE_NAME).update(id, { 추가됨: true });
       });
-      return await Promise.all(promiseList);
+      await Promise.all(promiseList);
+      return true;
     } catch (e) {
       if (e instanceof Error) this.logger.error('추천 글귀 체크 표시 과정 중 문제가 발생했습니다.');
       throw e;
