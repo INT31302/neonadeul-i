@@ -63,7 +63,7 @@ export class SlackInteractiveService {
     try {
       return await this.slack.chat.update({ text: message, ts, channel });
     } catch (e) {
-      this.logger.error('메시지 업데티ㅡ 중 문제가 발생했습니다.');
+      this.logger.error('메시지 업데이트 중 문제가 발생했습니다.');
       throw e;
     }
   }
