@@ -21,7 +21,7 @@ export class OpenaiService {
   async sendMessage(message: string): Promise<string> {
     try {
       const axiosResponse = await this.openai.createCompletion({
-        model: 'text-davinci-003',
+        model: 'gpt-3.5-turbo',
         prompt: message,
         temperature: 0.7,
         max_tokens: 2000,
