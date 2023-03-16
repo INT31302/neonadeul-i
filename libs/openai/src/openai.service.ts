@@ -20,17 +20,17 @@ export class OpenaiService {
    */
   async sendMessage(message: string): Promise<string> {
     try {
-      const axiosResponse = await this.openai.createCompletion({
+      const response = await this.openai.createChatCompletion({
         model: 'gpt-3.5-turbo',
-        prompt: message,
-        temperature: 0.7,
+        messages: [
+          { role: 'system', content: '너는 너나들이라는 봇이야.' },
+          { role: 'user', content: message },
+        ],
         max_tokens: 2000,
-        top_p: 1,
-        frequency_penalty: 0,
-        presence_penalty: 0,
+        temperature: 0.7,
         stream: false,
       });
-      return axiosResponse.data.choices[0].text;
+      return response.data.choices[0].message.content;
     } catch (e) {
       this.logger.error('openai 답장을 불러오는 과정 중 문제가 발생했습니다.');
       throw e;
