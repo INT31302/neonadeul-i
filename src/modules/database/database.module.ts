@@ -44,21 +44,21 @@ const DatabaseModule = Module.forRootAsync({
   useFactory: (config: ConfigService): TypeOrmModuleOptions => {
     const { isProduction } = config.get<AppConfigs>(AppConfigKey);
 
-    const { url, sync } = config.get<DatabaseConfigs>(DatabaseConfigKey);
+    const { database, host, port, user, password, shouldSync, shouldMigrate } = config.get<DatabaseConfigs>(DatabaseConfigKey);
 
     return {
       type: 'mysql',
       autoLoadEntities: true,
       namingStrategy: new SnakeNamingStrategy(),
-      synchronize: sync,
-      //
+      host: host,
+      port: port,
+      username: user,
+      password: password,
+      database: database,
+      synchronize: shouldSync,
       // logging level
       logging: isProduction === true ? ['info'] : ['query', 'log', 'info', 'error'],
-      ssl: {
-        rejectUnauthorized: false,
-      },
-      url: url,
-      migrationsRun: false,
+      migrationsRun: shouldMigrate,
       migrationsTableName: 'migration',
       migrations: [__dirname + '/migrations/*.js'],
       extra: {
