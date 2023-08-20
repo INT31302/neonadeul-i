@@ -11,12 +11,12 @@ import {
 import { User } from '@src/modules/user/entities/user.entity';
 import { isNil } from '@nestjs/common/utils/shared.utils';
 import { OpenaiService } from '@lib/openai';
-import { ClientProxy } from '@nestjs/microservices';
 import { SlackRedisType } from '@src/modules/slack/slack.types';
 import { isEndWithConsonant } from '@src/modules/common/utils';
 import { InjectSlackClient, SlackClient } from '@int31302/nestjs-slack-listener';
 import { UserService } from '@src/modules/user/user.service';
 import { OnlineDatabaseInterfaceService } from '@lib/online-database-interface';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class SlackEventService {
@@ -29,7 +29,7 @@ export class SlackEventService {
     private readonly openaiService: OpenaiService,
     @InjectSlackClient()
     private readonly slack: SlackClient,
-    @Inject('REDIS') private client: ClientProxy,
+    private readonly eventemitter: EventEmitter2,
   ) {}
 
   /**
@@ -96,7 +96,7 @@ export class SlackEventService {
     const user = await this.userService.findOne(event.user);
     if (isNil(message)) {
       const { ts } = await this.slackInteractiveService.postMessage(user.channelId, '너나들이가 입력중...');
-      this.client.emit<SlackRedisType>('openai', { ts, channel: user.channelId, message: event.text });
+      this.eventemitter.emit('openai', { ts, channel: user.channelId, message: event.text });
       return;
     }
 

@@ -4,7 +4,6 @@ import { SlackInteractiveService } from '@src/modules/slack/service/slack.intera
 import { SlackEventService } from '@src/modules/slack/service/slack.event.service';
 import { ACTION_ID } from '@src/modules/slack/slack.constants';
 import { ChatPostMessageResponse, ChatUpdateResponse, ViewsOpenResponse, ViewsPublishResponse } from '@slack/web-api';
-import { Ctx, MessagePattern, Payload, RedisContext } from '@nestjs/microservices';
 import { SlackRedisType } from '@src/modules/slack/slack.types';
 import { getModal } from '@src/modules/slack/slack.util';
 import {
@@ -16,6 +15,7 @@ import {
   SlackInteractivityHandler,
   SlackInteractivityListener,
 } from '@int31302/nestjs-slack-listener';
+import { OnEvent } from '@nestjs/event-emitter';
 
 @Controller('slack-event')
 @SlackEventListener()
@@ -24,10 +24,11 @@ export class SlackController {
   constructor(
     private readonly slackInteractiveService: SlackInteractiveService,
     private readonly slackEventService: SlackEventService,
-  ) {}
+  ) {
+  }
 
-  @MessagePattern('openai')
-  async updateMessageEvent(@Payload() data: SlackRedisType, @Ctx() context: RedisContext): Promise<ChatUpdateResponse> {
+  @OnEvent('openai', { async: true })
+  async updateMessageEvent(data: SlackRedisType): Promise<ChatUpdateResponse> {
     return await this.slackEventService.updateMessage(data);
   }
 
@@ -52,6 +53,7 @@ export class SlackController {
     const userId = payload.user.id;
     return this.slackInteractiveService.subscribe(userId);
   }
+
   @SlackInteractivityHandler(ACTION_ID.UNSUBSCRIBE)
   setUnsubscribe(payload: IncomingSlackInteractivity): Promise<ChatPostMessageResponse> {
     const userId = payload.user.id;
@@ -114,7 +116,7 @@ export class SlackController {
     const category: string =
       payload.view.state['values']['motivation_suggest_category_block']['motivation_suggest_category'][
         'selected_option'
-      ].value;
+        ].value;
     return await this.slackInteractiveService.onMessageSuggest(userId, message, category);
   }
 }
