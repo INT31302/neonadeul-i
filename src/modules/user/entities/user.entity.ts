@@ -59,7 +59,7 @@ export class User {
   @Column({
     comment: '현대인 어록 구독 여부',
     default: false,
-    name: 'modernText',
+    name: 'modern_text',
   })
   isModernText: boolean;
 }
