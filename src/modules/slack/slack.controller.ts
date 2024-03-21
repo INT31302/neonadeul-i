@@ -24,8 +24,7 @@ export class SlackController {
   constructor(
     private readonly slackInteractiveService: SlackInteractiveService,
     private readonly slackEventService: SlackEventService,
-  ) {
-  }
+  ) {}
 
   @OnEvent('openai', { async: true })
   async updateMessageEvent(data: SlackRedisType): Promise<ChatUpdateResponse> {
@@ -47,60 +46,55 @@ export class SlackController {
     return this.slackEventService.setHome(event);
   }
 
+  private getUserId(payload: IncomingSlackInteractivity | IncomingSlackViewInteractivity): string {
+    return payload.user.id;
+  }
   //interactive-api
   @SlackInteractivityHandler(ACTION_ID.SUBSCRIBE)
   setSubscribe(payload: IncomingSlackInteractivity): Promise<ChatPostMessageResponse> {
-    const userId = payload.user.id;
-    return this.slackInteractiveService.subscribe(userId);
+    return this.slackInteractiveService.updateSubscribeStatus(this.getUserId(payload), ACTION_ID.SUBSCRIBE);
   }
 
   @SlackInteractivityHandler(ACTION_ID.UNSUBSCRIBE)
   setUnsubscribe(payload: IncomingSlackInteractivity): Promise<ChatPostMessageResponse> {
-    const userId = payload.user.id;
-    return this.slackInteractiveService.unsubscribe(userId);
+    return this.slackInteractiveService.updateSubscribeStatus(this.getUserId(payload), ACTION_ID.UNSUBSCRIBE);
   }
 
   @SlackInteractivityHandler(ACTION_ID.MODERN_TEXT_ON)
   setModernTextOn(payload: IncomingSlackInteractivity): Promise<ChatPostMessageResponse> {
-    const userId = payload.user.id;
-    return this.slackInteractiveService.modernOn(userId);
+    return this.slackInteractiveService.updateModernSubscribeStatus(this.getUserId(payload), ACTION_ID.MODERN_TEXT_ON);
   }
 
   @SlackInteractivityHandler(ACTION_ID.MODERN_TEXT_OFF)
   setModernTextOff(payload: IncomingSlackInteractivity): Promise<ChatPostMessageResponse> {
-    const userId = payload.user.id;
-    return this.slackInteractiveService.modernOff(userId);
+    return this.slackInteractiveService.updateModernSubscribeStatus(this.getUserId(payload), ACTION_ID.MODERN_TEXT_OFF);
   }
 
   @SlackInteractivityHandler(ACTION_ID.TIMEPICKER)
   setTime(payload: IncomingSlackInteractivity): Promise<ChatPostMessageResponse> {
-    const userId = payload.user.id;
     const selectedTime = payload.actions[0].selected_time;
-    return this.slackInteractiveService.setTime(userId, selectedTime);
+    return this.slackInteractiveService.setTime(this.getUserId(payload), selectedTime);
   }
 
   @SlackInteractivityHandler(ACTION_ID.CHEERING_SCORE)
   setCheeringScore(payload: IncomingSlackInteractivity): Promise<ChatPostMessageResponse> {
-    const userId = payload.user.id;
     const value = Number(payload.actions[0].selected_option.text.text);
     //
-    return this.slackInteractiveService.updatePreference(userId, CategoryType.응원, value);
+    return this.slackInteractiveService.updatePreference(this.getUserId(payload), CategoryType.응원, value);
   }
 
   @SlackInteractivityHandler(ACTION_ID.MOTIVATION_SCORE)
   setMotivationScore(payload: IncomingSlackInteractivity): Promise<ChatPostMessageResponse> {
-    const userId = payload.user.id;
     const value = Number(payload.actions[0].selected_option.text.text);
 
-    return this.slackInteractiveService.updatePreference(userId, CategoryType.동기부여, value);
+    return this.slackInteractiveService.updatePreference(this.getUserId(payload), CategoryType.동기부여, value);
   }
 
   @SlackInteractivityHandler(ACTION_ID.CONSOLATION_SCORE)
   setConsolationScore(payload: IncomingSlackInteractivity): Promise<ChatPostMessageResponse> {
-    const userId = payload.user.id;
     const value = Number(payload.actions[0].selected_option.text.text);
 
-    return this.slackInteractiveService.updatePreference(userId, CategoryType.위로, value);
+    return this.slackInteractiveService.updatePreference(this.getUserId(payload), CategoryType.위로, value);
   }
 
   @SlackInteractivityHandler(ACTION_ID.MOTIVATION_SUGGEST_MODAL_OPEN)
@@ -110,13 +104,12 @@ export class SlackController {
 
   @SlackInteractivityHandler(ACTION_ID.MOTIVATION_SUGGEST)
   async onMessageSuggest(payload: IncomingSlackViewInteractivity) {
-    const userId = payload.user.id;
     const message: string =
       payload.view.state['values']['motivation_suggest_text_block']['motivation_suggest_text'].value;
     const category: string =
       payload.view.state['values']['motivation_suggest_category_block']['motivation_suggest_category'][
         'selected_option'
-        ].value;
-    return await this.slackInteractiveService.onMessageSuggest(userId, message, category);
+      ].value;
+    return await this.slackInteractiveService.onMessageSuggest(this.getUserId(payload), message, category);
   }
 }

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { SlackInteractiveService } from '@src/modules/slack/service/slack.interactive.service';
 import {
   ChatPostMessageResponse,
@@ -9,13 +9,10 @@ import {
   ViewsPublishResponse,
 } from '@slack/web-api';
 import { User } from '@src/modules/user/entities/user.entity';
-import { isNil } from '@nestjs/common/utils/shared.utils';
 import { OpenaiService } from '@lib/openai';
 import { SlackRedisType } from '@src/modules/slack/slack.types';
-import { isEndWithConsonant } from '@src/modules/common/utils';
 import { InjectSlackClient, SlackClient } from '@int31302/nestjs-slack-listener';
 import { UserService } from '@src/modules/user/user.service';
-import { OnlineDatabaseInterfaceService } from '@lib/online-database-interface';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
@@ -25,11 +22,10 @@ export class SlackEventService {
   constructor(
     private readonly userService: UserService,
     private readonly slackInteractiveService: SlackInteractiveService,
-    private readonly onlineDatabaseInterfaceService: OnlineDatabaseInterfaceService,
     private readonly openaiService: OpenaiService,
     @InjectSlackClient()
     private readonly slack: SlackClient,
-    private readonly eventemitter: EventEmitter2,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -65,15 +61,22 @@ export class SlackEventService {
   async saveUser(event: any): Promise<User> {
     const response = await this.getUserInfo(event.user);
     const displayName = response.user.profile.display_name;
-    const name = displayName.includes('(') ? displayName.split('(')[1].split(')')[0] : displayName;
-    const user = await this.userService.findOne(event.user);
-    if (!user) {
-      return await this.userService.save({
-        id: event.user,
-        name,
-        channelId: event.channel,
-      });
-    } else return user;
+    const name = displayName.includes('(') ? this.getNickname(displayName) : displayName;
+    return await this.userService.save({
+      id: event.user,
+      name,
+      channelId: event.channel,
+    });
+  }
+
+  /**
+   * 이름에 포함되어있는 닉네임만 가져옵니다.
+   * 예를 들면 김상재(제리)는 제리만 가져옴.
+   * @param displayName
+   * @private
+   */
+  private getNickname(displayName: string) {
+    return displayName.split('(')[1].split(')')[0];
   }
 
   /**
@@ -85,31 +88,21 @@ export class SlackEventService {
   }
 
   /**
-   * 유저가 너나들이 메시지를 보낼 시 실행되는 함수
-   * 이스터에그를 입력할 경우 user.jerry 활성화
-   * 아닐 경우 openai api 를 이용한 챗봇 기능 사용
+   * 유저가 너나들이에게 메시지를 보낼 시 실행되는 함수
+   * openai api 를 이용한 챗봇 기능 사용
    * 챗봇의 경우 api 가 느려서 임시 메시지를 발송하고 수정하는 방식으로 진행
    * @param event
    */
   async sendMessage(event: any): Promise<ChatPostMessageResponse> {
-    let message = await this.onlineDatabaseInterfaceService.searchEasterEgg(event.text);
     const user = await this.userService.findOne(event.user);
-    if (isNil(message)) {
-      const { ts } = await this.slackInteractiveService.postMessage(user.channelId, '너나들이가 입력중...');
-      this.eventemitter.emit('openai', { ts, channel: user.channelId, message: event.text });
-      return;
-    }
+    const message = await this.slackInteractiveService.postMessage(user.channelId, '너나들이가 입력중...');
+    this.eventEmitter.emit('openai', { ts: message.ts, channel: user.channelId, message: event.text });
+    return message;
 
-    if (event.text !== '힌트' && !user.jerry) {
-      user.jerry = true;
-      await this.userService.save(user);
-      this.logger.log(`${user.name} 제리 활성화`);
-    }
+    // message = message.replace(/\${name}/gi, user.name);
+    // message = message.replace(/\${josa}/gi, isEndWithConsonant(user.name) ? '을' : '를');
 
-    message = message.replace(/\${name}/gi, user.name);
-    message = message.replace(/\${josa}/gi, isEndWithConsonant(user.name) ? '을' : '를');
-
-    return await this.slackInteractiveService.postMessage(user.channelId, message);
+    // return await this.slackInteractiveService.postMessage(user.channelId, message);
   }
 
   /**

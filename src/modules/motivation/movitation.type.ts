@@ -4,3 +4,8 @@ export enum CategoryType {
   '위로',
   '기타',
 }
+
+export type CategoryWeightType = {
+  category: CategoryType;
+  weight: number;
+};

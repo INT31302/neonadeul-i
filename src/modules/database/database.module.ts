@@ -1,18 +1,18 @@
 import { Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectConnection, TypeOrmModule } from '@nestjs/typeorm';
+import { InjectDataSource, TypeOrmModule } from '@nestjs/typeorm';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm/dist/interfaces/typeorm-options.interface';
 import { AppConfigKey, AppConfigs } from '@src/config/app.config';
 import { DatabaseConfigKey, DatabaseConfigs } from '@src/config/database.config';
-import { Connection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
 class Module extends TypeOrmModule implements OnModuleInit {
   private readonly logger: Logger = new Logger(this.constructor.name);
 
   constructor(
-    @InjectConnection()
-    private readonly connection: Connection,
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
   ) {
     super();
   }
@@ -23,7 +23,7 @@ class Module extends TypeOrmModule implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     this.logger.debug(`onModuleInit`);
 
-    const runner = this.connection.createQueryRunner('slave');
+    const runner = this.dataSource.createQueryRunner('slave');
 
     try {
       const rows = await runner.query('select 1 as pong');
@@ -44,7 +44,8 @@ const DatabaseModule = Module.forRootAsync({
   useFactory: (config: ConfigService): TypeOrmModuleOptions => {
     const { isProduction } = config.get<AppConfigs>(AppConfigKey);
 
-    const { database, host, port, user, password, shouldSync, shouldMigrate } = config.get<DatabaseConfigs>(DatabaseConfigKey);
+    const { database, host, port, user, password, shouldSync, shouldMigrate } =
+      config.get<DatabaseConfigs>(DatabaseConfigKey);
 
     return {
       type: 'mysql',

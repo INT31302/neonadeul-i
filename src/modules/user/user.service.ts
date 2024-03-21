@@ -1,9 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { User } from '@src/modules/user/entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, UpdateResult } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { DeepPartial } from 'typeorm/common/DeepPartial';
+import { CategoryType } from '@src/modules/motivation/movitation.type';
 
 @Injectable()
 export class UserService {
@@ -23,7 +24,44 @@ export class UserService {
    * 사용자 정보를 생성합니다.
    * @param user
    */
-  save(user: DeepPartial<User>): Promise<User> {
+  async save(user: DeepPartial<User>): Promise<User> {
+    const userEntity = await this.userRepository.findOneBy({ id: user.id });
+    if (userEntity) {
+      return userEntity;
+    }
+    return await this.userRepository.save({
+      id: user.id,
+      name: user.name,
+      channelId: user.channelId,
+    });
+  }
+
+  /**
+   * 현대인 어록 구독 여부를 업데이트 합니다.
+   * @param user
+   * @param isModernText
+   */
+  updateModernSubscribe(user: DeepPartial<User>, isModernText: boolean): Promise<UpdateResult> {
+    return this.userRepository.update(user.id, { isModernText });
+  }
+
+  updateSubscribe(user: DeepPartial<User>, isSubscribe: boolean): Promise<UpdateResult> {
+    return this.userRepository.update(user.id, { isSubscribe });
+  }
+
+  async updatePreference(userId: string, categoryType: CategoryType, value: number): Promise<User> {
+    const user = await this.findOne(userId);
+    switch (categoryType) {
+      case CategoryType.동기부여:
+        user.motivation = value;
+        break;
+      case CategoryType.응원:
+        user.cheering = value;
+        break;
+      case CategoryType.위로:
+        user.consolation = value;
+        break;
+    }
     return this.userRepository.save(user);
   }
 
@@ -57,7 +95,7 @@ export class UserService {
    * @param id
    */
   findOne(id: string): Promise<User> {
-    return this.userRepository.findOneBy({ id });
+    return this.userRepository.findOneByOrFail({ id });
   }
 
   /**
@@ -72,5 +110,15 @@ export class UserService {
    */
   async removeList(userList: User[]): Promise<User[]> {
     return this.userRepository.remove(userList);
+  }
+
+  /**
+   *
+   * @param userId
+   * @param selectedTime
+   */
+  async setTime(userId: string, selectedTime: string): Promise<User> {
+    const user = await this.findOne(userId);
+    return await this.userRepository.save({ ...user, pushTime: selectedTime });
   }
 }

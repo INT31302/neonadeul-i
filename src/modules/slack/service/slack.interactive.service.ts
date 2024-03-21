@@ -13,6 +13,7 @@ import { InjectSlackClient, SlackClient } from '@int31302/nestjs-slack-listener'
 import * as dayjs from 'dayjs';
 import { UserService } from '@src/modules/user/user.service';
 import { OnlineDatabaseInterfaceService } from '@lib/online-database-interface';
+import { ACTION_ID } from '@src/modules/slack/slack.constants';
 
 @Injectable()
 export class SlackInteractiveService {
@@ -43,10 +44,15 @@ export class SlackInteractiveService {
    */
   async postMessage(channel: string, message: string): Promise<ChatPostMessageResponse> {
     try {
-      return await this.slack.chat.postMessage({
+      const result = await this.slack.chat.postMessage({
         text: message,
         channel,
       });
+      if (!result.ok) {
+        await this.postErrorMessage(channel);
+        new Error(result.error);
+      }
+      return result;
     } catch (e) {
       this.logger.error('메시지 발송 중 문제가 발생했습니다.');
       throw e;
@@ -85,113 +91,69 @@ export class SlackInteractiveService {
   }
 
   /**
-   * 구독 설정
-   * 이미 구독한 경우 별도 메시지 발송
-   * @param userId
-   */
-  async subscribe(userId: string): Promise<ChatPostMessageResponse> {
-    const user = await this.userService.findOne(userId);
-    if (user.isSubscribe) {
-      return await this.postMessage(user.channelId, '앗! 이미 등록되어 있어요.');
-    }
-    user.isSubscribe = true;
-    await this.userService.save(user);
-    this.logger.log(`${user.name} 구독 완료`);
-    const homeTemplate = this.createView(user);
-    await this.slack.views.publish(homeTemplate);
-    const result = await this.postMessage(
-      user.channelId,
-      `${user.name} 어서오세요. 정상적으로 등록이 완료되었습니다.🥰`,
-    );
-    if (!result.ok) {
-      await this.postErrorMessage(user.channelId);
-      new Error(result.error);
-    }
-
-    return result;
-  }
-
-  /**
-   * 구독 해제
-   * 이미 구독 했거나 구독 하지 않은 경우 별도 메시지 발송
-   * app_home 초기화
-   * @param userId
-   */
-  async unsubscribe(userId: string): Promise<ChatPostMessageResponse> {
-    const user = await this.userService.findOne(userId);
-    if (!user || !user.isSubscribe) {
-      return await this.postMessage(user.channelId, '삭제 가능한 유저 정보가 없어요.');
-    }
-    const homeTemplate = createHomeTemplate(user.id, '11:00', false, 0, 0, 0, false);
-    await this.slack.views.publish(homeTemplate);
-    user.isSubscribe = false;
-    await this.userService.save(user);
-    this.logger.log(`${user.name} 구독 취소`);
-    const result = await this.postMessage(user.channelId, `${user.name}, 아쉽지만 다음에 또 봬요.😌`);
-    if (!result.ok) {
-      await this.postErrorMessage(user.channelId);
-      new Error(result.error);
-    }
-    return result;
-  }
-
-  /**
    * 메시지 수신 시간 변경
    * @param userId
    * @param selectedTime
    */
-  async setTime(userId: any, selectedTime: any): Promise<ChatPostMessageResponse> {
-    const user = await this.userService.findOne(userId);
-    if (!user) return;
-    await this.userService.save({ ...user, pushTime: selectedTime });
+  async setTime(userId: string, selectedTime: string): Promise<ChatPostMessageResponse> {
+    const user = await this.userService.setTime(userId, selectedTime);
     this.logger.log(`${user.name} 메시지 수신 시간 변경 (${selectedTime})`);
     return await this.postMessage(user.channelId, `메시지 수신 시간을 변경되었습니다. (${selectedTime})`);
   }
 
   /**
-   * 현대인 글귀 구독 설정
-   * 이미 수신한 경우 별도 메시지 발송
+   * 구독 업데이트
+   * 구독 해제 시 app_home 초기화
    * @param userId
+   * @param actionId
    */
-  async modernOn(userId: string): Promise<ChatPostMessageResponse> {
+  async updateSubscribeStatus(
+    userId: string,
+    actionId: ACTION_ID.SUBSCRIBE | ACTION_ID.UNSUBSCRIBE,
+  ): Promise<ChatPostMessageResponse> {
     const user = await this.userService.findOne(userId);
-    if (user.modernText) {
-      return await this.postMessage(user.channelId, '앗! 이미 수신 허용 했어요.');
+    let message: string;
+    let homeTemplate: ViewsPublishArguments;
+    if (actionId === ACTION_ID.SUBSCRIBE) {
+      await this.userService.updateSubscribe(user, true);
+      this.logger.log(`${user.name} 구독 완료`);
+      message = `${user.name} 어서오세요. 정상적으로 등록이 완료되었습니다.🥰`;
+      homeTemplate = this.createView(user);
+    } else {
+      if (!user || !user.isSubscribe) {
+        return this.postMessage(user.channelId, '삭제 가능한 유저 정보가 없어요.');
+      }
+      await this.userService.updateSubscribe(user, false);
+      this.logger.log(`${user.name} 구독 취소`);
+      message = `${user.name}, 아쉽지만 다음에 또 봬요.😌`;
+      homeTemplate = createHomeTemplate(user.id, '11:00', false, 0, 0, 0, false);
     }
-    user.modernText = true;
-    await this.userService.save(user);
-    this.logger.log(`${user.name} 현대인 글귀 구독 완료`);
-    const homeTemplate = this.createView(user);
     await this.publishView(homeTemplate);
-    const result = await this.postMessage(user.channelId, `현대인 글귀 구독 상태가 수신 상태로 변경 됐어요!`);
-    if (!result.ok) {
-      await this.postErrorMessage(user.channelId);
-      new Error(result.error);
-    }
-    return result;
+    return this.postMessage(user.channelId, message);
   }
 
   /**
-   * 현대인 글귀 수신 거부
-   * 이미 수신 거부한 경우 별도 메시지 발송
+   * 현대인 어록 구독 업데이트
    * @param userId
+   * @param actionId
    */
-  async modernOff(userId: string): Promise<ChatPostMessageResponse> {
+  async updateModernSubscribeStatus(
+    userId: string,
+    actionId: ACTION_ID.MODERN_TEXT_ON | ACTION_ID.MODERN_TEXT_OFF,
+  ): Promise<ChatPostMessageResponse> {
     const user = await this.userService.findOne(userId);
-    if (!user.modernText) {
-      return await this.postMessage(user.channelId, '앗! 이미 수신 거부 했어요.');
+    let message: string;
+    if (actionId === ACTION_ID.MODERN_TEXT_ON) {
+      await this.userService.updateModernSubscribe(user, true);
+      this.logger.log(`${user.name} 현대인 글귀 구독 완료`);
+      message = '현대인 글귀 구독 상태가 수신 상태로 변경 됐어요!';
+    } else {
+      await this.userService.updateModernSubscribe(user, false);
+      this.logger.log(`${user.name} 현대인 글귀 구독 취소`);
+      message = '현대인 글귀 구독 상태가 미수신 상태로 변경 됐어요!';
     }
-    user.modernText = false;
-    await this.userService.save(user);
-    this.logger.log(`${user.name} 현대인 글귀 구독 취소`);
-    const homeTemplate = this.createView(user);
-    await this.publishView(homeTemplate);
-    const result = await this.postMessage(user.channelId, `현대인 글귀 구독 상태가 미수신 상태로 변경 됐어요!`);
-    if (!result.ok) {
-      await this.postErrorMessage(user.channelId);
-      new Error(result.error);
-    }
-    return result;
+    await this.publishView(this.createView(user));
+    return this.postMessage(user.channelId, message);
   }
 
   /**
@@ -201,30 +163,10 @@ export class SlackInteractiveService {
    * @param value
    */
   async updatePreference(userId: string, categoryType: CategoryType, value: number): Promise<ChatPostMessageResponse> {
-    const user = await this.userService.findOne(userId);
-    switch (categoryType) {
-      case CategoryType.동기부여:
-        user.motivation = value;
-        break;
-      case CategoryType.응원:
-        user.cheering = value;
-        break;
-      case CategoryType.위로:
-        user.consolation = value;
-        break;
-    }
-    await this.userService.save(user);
+    const user = await this.userService.updatePreference(userId, categoryType, value);
     this.logger.log(`${user.name} 카테고리 선호도 값 변경(카테고리: ${CategoryType[categoryType]}, 값: ${value})`);
     await this.publishView(this.createView(user));
-    const result = await this.postMessage(
-      user.channelId,
-      `${CategoryType[categoryType]} 카테고리 선호도 값이 수정되었습니다.`,
-    );
-    if (!result.ok) {
-      await this.postErrorMessage(user.channelId);
-      new Error(result.error);
-    }
-    return result;
+    return this.postMessage(user.channelId, `${CategoryType[categoryType]} 카테고리 선호도 값이 수정되었습니다.`);
   }
 
   /**
@@ -240,7 +182,7 @@ export class SlackInteractiveService {
       user.cheering,
       user.motivation,
       user.consolation,
-      user.modernText,
+      user.isModernText,
     );
   }
 
@@ -270,11 +212,6 @@ export class SlackInteractiveService {
         ? CategoryType['위로']
         : CategoryType['기타'];
     await this.onlineDatabaseInterfaceService.createSuggestRecord(dayjs().toISOString(), message, categoryType);
-    const result = await this.postMessage(user.channelId, `${user.name}. 소중한 글귀 추천 감사해요!`);
-    if (!result.ok) {
-      await this.postErrorMessage(user.channelId);
-      new Error(result.error);
-    }
-    return result;
+    return this.postMessage(user.channelId, `${user.name}. 소중한 글귀 추천 감사해요!`);
   }
 }

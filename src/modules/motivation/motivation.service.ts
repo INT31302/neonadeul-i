@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { User } from '@src/modules/user/entities/user.entity';
 import { Motivation } from '@src/modules/motivation/entities/motivation.entity';
 import * as dayjs from 'dayjs';
 import { CategoryType } from '@src/modules/motivation/movitation.type';
@@ -11,6 +10,9 @@ import { UserService } from '@src/modules/user/user.service';
 import { HolidayService } from '@src/modules/holiday/holiday.service';
 import { OnlineDatabaseInterfaceService } from '@lib/online-database-interface';
 import { MotivationModel } from '@lib/online-database-interface/online-database-interface.type';
+import { CategoryWeight } from '@src/modules/motivation/category.weight';
+import { ConfigService } from '@nestjs/config';
+import { getRandomNumber } from '@src/modules/common/utils';
 
 @Injectable()
 export class MotivationService {
@@ -19,6 +21,7 @@ export class MotivationService {
     @InjectRepository(Motivation) private motivationRepository: Repository<Motivation>,
     private readonly userService: UserService,
     private readonly holidayService: HolidayService,
+    private readonly configService: ConfigService,
     private readonly slackInteractiveService: SlackInteractiveService,
     private readonly onlineDatabaseService: OnlineDatabaseInterfaceService,
   ) {}
@@ -70,37 +73,39 @@ export class MotivationService {
   })
   private async sendMotivation(): Promise<void> {
     try {
-      if (process.env.APP_ENV !== 'prod') {
+      if (this.configService.get<string>('APP_ENV') !== 'prod') {
         this.logger.debug('운영환경이 아니기 때문에 종료합니다.');
         return;
       }
+
       const holiday = await this.holidayService.findOne(dayjs().format('YYYYMMDD'));
       if (holiday) {
         this.logger.log('공휴일이기 때문에 메시지 발송을 종료합니다.');
         return;
       }
+
       const time = dayjs().format('HH:mm');
       this.logger.log(`메시지 수신 대상자를 조회합니다. (${time})`);
       const userList = await this.userService.findSubscriberOnPushTime(time);
+
       if (userList.length === 0) {
         this.logger.log(`메시지 수신 대상자가 없습니다. (${time})`);
         return;
       }
+
       this.logger.log(`${userList.length}명의 메시지 수신 대상자가 존재합니다. (${time})`);
       const motivationList = await this.motivationRepository.find();
-      userList.map(async (user) => {
-        const candidates = this.weightedRandom(user);
-        const category = this.getRandomCategory(candidates);
-        const motivation = await this.getMotivation(motivationList, category, user.modernText);
+
+      for (const user of userList) {
+        const category = new CategoryWeight(user.motivation, user.cheering, user.consolation).getCategoryByWeight();
+        const motivation = await this.getMotivation(motivationList, category, user.isModernText);
         await this.slackInteractiveService.postMessage(
           user.channelId,
           `${user.name}. 오늘의 메시지가 도착했어요. 오늘 하루도 힘내세요!
 >>>${motivation.contents}`,
         );
-      });
+      }
       this.logger.log(`${userList.length}명에게 메시지 전송 완료. (${time})`);
-      // 이벤트 종료
-      // await this.sendEventMessage();
     } catch (e) {
       if (e instanceof Error) this.logger.error('글귀 발송 과정 중 문제가 발생했습니다.');
       throw e;
@@ -108,66 +113,19 @@ export class MotivationService {
   }
 
   /**
-   * 유저의 선호도 기반으로 가중치를 계산합니다.
-   * @param user
-   * @private
-   */
-  private weightedRandom(user: User): Map<CategoryType, number> {
-    const target = new Map<CategoryType, number>();
-    target.set(CategoryType['동기부여'], user.motivation);
-    target.set(CategoryType['응원'], user.cheering);
-    target.set(CategoryType['위로'], user.consolation);
-    // 1. 총 가중치 합 계산
-    let totalWeight = 0;
-    for (const item of target) {
-      totalWeight += item[1];
-    }
-    // 2. 주어진 가중치를 백분율로 치환 (가중치 / 총 가중치)
-
-    const candidates = new Map<CategoryType, number>();
-    for (const item of target) {
-      candidates.set(item[0], item[1] / totalWeight);
-    }
-
-    // 3. 가중치의 오름차순으로 정렬
-    const candidatesArray = Array.from(candidates);
-    candidatesArray.sort((a, b) => a[1] - b[1]);
-
-    return new Map(candidatesArray);
-  }
-
-  /**
-   * 가중치 기반으로 카테고리를 선정합니다.
-   * @param candidates
-   * @private
-   */
-  private getRandomCategory(candidates: Map<CategoryType, number>): CategoryType {
-    // 1. 랜덤 기준점 설정
-    const pivot = Math.random();
-
-    // 2. 가중치의 오름차순으로 원소들을 순회하며 가중치를 누적
-    let acc = 0;
-    for (const item of candidates) {
-      acc += item[1];
-      if (pivot <= acc) {
-        return item[0];
-      }
-    }
-    return null;
-  }
-
-  /**
    * 각 유저별 선정된 카테고리 기반으로 글귀를 필터링 후 랜덤으로 글귀를 선정합니다.
-   * 현대인 글귀는 필수로 포함됩니다.
+   * 현대인 글귀는 사용자 옵션에 따라 리스트에 포함하여 랜덤으로 선정합니다.
    * @param motivationList
    * @param category
-   * @param modernText
+   * @param isModernText
    * @private
    */
-  private async getMotivation(motivationList: Motivation[], category: CategoryType, modernText: boolean) {
-    const motivations = motivationList.filter((item) => item.category === category);
-    if (modernText) motivations.push(...motivations.filter((item) => item.category === CategoryType['기타']));
-    return motivations[Math.floor(Math.random() * motivations.length)];
+  private async getMotivation(motivationList: Motivation[], category: CategoryType, isModernText: boolean) {
+    const filteredMotivationList = motivationList.filter((item) => item.category === category);
+    if (isModernText) {
+      filteredMotivationList.push(...filteredMotivationList.filter((item) => item.category === CategoryType['기타']));
+    }
+    return filteredMotivationList[Math.floor(getRandomNumber() * filteredMotivationList.length)];
   }
 
   // 이벤트 종료
