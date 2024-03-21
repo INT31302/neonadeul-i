@@ -1,7 +1,7 @@
 import { ModalView, ViewsPublishArguments } from '@slack/web-api';
 import { ACTION_ID } from '@src/modules/slack/slack.constants';
 import { Bits, Blocks, Elements, Md, OptionBuilder, Surfaces, ViewBlockBuilder } from 'slack-block-builder';
-import { Appendable, Label, OptionGroups } from 'slack-block-builder/dist/internal';
+import { Appendable } from 'slack-block-builder/dist/internal';
 
 export const getValuesSelect = (): OptionBuilder[] => {
   const result: OptionBuilder[] = [];

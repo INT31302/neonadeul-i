@@ -14,6 +14,7 @@ import * as dayjs from 'dayjs';
 import { UserService } from '@src/modules/user/user.service';
 import { OnlineDatabaseInterfaceService } from '@lib/online-database-interface';
 import { ACTION_ID } from '@src/modules/slack/slack.constants';
+import { DeepPartial } from 'typeorm/common/DeepPartial';
 
 @Injectable()
 export class SlackInteractiveService {
@@ -126,7 +127,15 @@ export class SlackInteractiveService {
       await this.userService.updateSubscribe(user, false);
       this.logger.log(`${user.name} 구독 취소`);
       message = `${user.name}, 아쉽지만 다음에 또 봬요.😌`;
-      homeTemplate = createHomeTemplate(user.id, '11:00', false, 0, 0, 0, false);
+      homeTemplate = this.createView({
+        id: user.id,
+        pushTime: '11:00',
+        isSubscribe: false,
+        cheering: 0,
+        motivation: 0,
+        consolation: 0,
+        isModernText: false,
+      });
     }
     await this.publishView(homeTemplate);
     return this.postMessage(user.channelId, message);
@@ -174,7 +183,7 @@ export class SlackInteractiveService {
    * @param user
    * @private
    */
-  createView(user: User): ViewsPublishArguments {
+  createView(user: DeepPartial<User>): ViewsPublishArguments {
     return createHomeTemplate(
       user.id,
       user.pushTime,
