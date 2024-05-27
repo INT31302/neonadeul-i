@@ -216,10 +216,10 @@ export class SlackInteractiveService {
       category === 'motivation'
         ? CategoryType['동기부여']
         : category === 'cheering'
-        ? CategoryType['응원']
-        : category === 'consolation'
-        ? CategoryType['위로']
-        : CategoryType['기타'];
+          ? CategoryType['응원']
+          : category === 'consolation'
+            ? CategoryType['위로']
+            : CategoryType['기타'];
     await this.onlineDatabaseInterfaceService.createSuggestRecord(dayjs().toISOString(), message, categoryType);
     return this.postMessage(user.channelId, `${user.name}. 소중한 글귀 추천 감사해요!`);
   }

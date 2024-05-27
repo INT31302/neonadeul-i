@@ -9,7 +9,10 @@ export class OpenApiHolidayService {
   private readonly logger: Logger = new Logger(this.constructor.name);
   private readonly serviceKey: string;
   private retryAttempt: number;
-  constructor(private readonly httpService: HttpService, private readonly configService: ConfigService) {
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+  ) {
     this.serviceKey = this.configService.get<string>('HOLIDAY_API_KEY');
     this.resetRetryAttempt();
   }
