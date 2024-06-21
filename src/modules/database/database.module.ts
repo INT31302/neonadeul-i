@@ -48,7 +48,7 @@ const DatabaseModule = Module.forRootAsync({
       config.get<DatabaseConfigs>(DatabaseConfigKey);
 
     return {
-      type: 'mysql',
+      type: 'postgres',
       autoLoadEntities: true,
       namingStrategy: new SnakeNamingStrategy(),
       host: host,
@@ -57,6 +57,7 @@ const DatabaseModule = Module.forRootAsync({
       password: password,
       database: database,
       synchronize: shouldSync,
+      ssl: true,
       // logging level
       logging: isProduction === true ? ['info'] : ['query', 'log', 'info', 'error'],
       migrationsRun: shouldMigrate,
