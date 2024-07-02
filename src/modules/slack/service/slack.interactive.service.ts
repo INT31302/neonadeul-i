@@ -5,6 +5,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import {
   ChatPostMessageResponse,
   ChatUpdateResponse,
+  ConversationsRepliesArguments,
+  ConversationsRepliesResponse,
   ViewsPublishArguments,
   ViewsPublishResponse,
 } from '@slack/web-api';
@@ -40,14 +42,17 @@ export class SlackInteractiveService {
 
   /**
    * 메시지 발송
+   * ts가 존재할 경우 스레드 형식으로 메시지를 작성합니다.
    * @param channel
    * @param message
+   * @param ts
    */
-  async postMessage(channel: string, message: string): Promise<ChatPostMessageResponse> {
+  async postMessage(channel: string, message: string, ts?: string): Promise<ChatPostMessageResponse> {
     try {
       const result = await this.slack.chat.postMessage({
         text: message,
         channel,
+        thread_ts: ts,
       });
       if (!result.ok) {
         await this.postErrorMessage(channel);
@@ -82,11 +87,24 @@ export class SlackInteractiveService {
   async postErrorMessage(channelId: string): Promise<ChatPostMessageResponse> {
     try {
       return await this.slack.chat.postMessage({
-        text: '알 수 없는 오류가 발생하였습니다❗️',
+        text: '알 수 없는 오류가 발생하였습니다❗',
         channel: channelId,
       });
     } catch (e) {
       this.logger.error('에러 메시지 발송 중 문제가 발생했습니다.');
+      throw e;
+    }
+  }
+
+  /**
+   * thread 내역 조회
+   * @param options
+   */
+  async getReplyList(options?: ConversationsRepliesArguments): Promise<ConversationsRepliesResponse> {
+    try {
+      return await this.slack.conversations.replies(options);
+    } catch (e) {
+      this.logger.error('스레드 내역 조회 중 문제가 발생했습니다.');
       throw e;
     }
   }

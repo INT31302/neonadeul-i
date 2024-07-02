@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { OpenaiConfig } from '@lib/openai/openai.config';
 import { OpenAI } from 'openai';
+import { Chat } from 'openai/resources';
 
 @Injectable()
 export class OpenaiService {
@@ -15,15 +16,20 @@ export class OpenaiService {
 
   /**
    * 유저가 작성한 메시지 기반으로 답장을 받습니다.
-   * @param message
+   * @param messageList
    */
-  async sendMessage(message: string): Promise<string> {
+  async sendMessage(messageList: string[]): Promise<string> {
     try {
       const stream = this.openai.beta.chat.completions.stream({
         model: 'gpt-4o',
         messages: [
           { role: 'system', content: '너는 너나들이라는 봇이야.' },
-          { role: 'user', content: message },
+          ...messageList.map((message: string): Chat.ChatCompletionMessageParam => {
+            return {
+              role: 'user',
+              content: message,
+            };
+          }),
         ],
         stream: true,
       });

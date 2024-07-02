@@ -95,8 +95,10 @@ export class SlackEventService {
    */
   async sendMessage(event: any): Promise<ChatPostMessageResponse> {
     const user = await this.userService.findOne(event.user);
-    const message = await this.slackInteractiveService.postMessage(user.channelId, '너나들이가 입력중...');
-    this.eventEmitter.emit('openai', { ts: message.ts, channel: user.channelId, message: event.text });
+    // 스레드 내용을 전부 받아옵니다.
+    const messageList = await this.getMessageList(event);
+    const message = await this.slackInteractiveService.postMessage(user.channelId, '너나들이가 입력중...', event.ts);
+    this.eventEmitter.emit('openai', { ts: message.ts, channel: user.channelId, messageList });
     return message;
 
     // message = message.replace(/\${name}/gi, user.name);
@@ -106,20 +108,35 @@ export class SlackEventService {
   }
 
   /**
+   * thread ts 를 이용하여 해당 스레드 내용을 모두 받아옵니다.
+   * @param event
+   * @private
+   */
+  private async getMessageList(event: any): Promise<string[]> {
+    const replyList = await this.slackInteractiveService.getReplyList({
+      ts: event.thread_ts ?? event.ts,
+      channel: event.channel,
+    });
+    return replyList.messages.map((message) => {
+      return message.text;
+    });
+  }
+
+  /**
    * 채팅 기능 중 openai 답변이 작성되면 이전 답장 수정
    * @param ts
    * @param message
    * @param channel
    */
-  async updateMessage({ ts, message, channel }: SlackRedisType): Promise<ChatUpdateResponse> {
+  async updateMessage({ ts, messageList, channel }: SlackRedisType): Promise<ChatUpdateResponse> {
     let result: string;
     try {
-      result = await this.openaiService.sendMessage(message);
+      result = await this.openaiService.sendMessage(messageList);
     } catch (e) {
       if (e instanceof Error) {
         this.logger.error(e.message, e.stack);
       }
-      result = '⚠️너나들이가 많은 사람들의 요청으로 인해 너무 바빠요. 1분 뒤에 다시 시도해주세요!';
+      result = '!너나들이가 많은 사람들의 요청으로 인해 너무 바빠요. 1분 뒤에 다시 시도해주세요!';
     }
     return this.slackInteractiveService.updateMessage(channel, result, ts);
   }
