@@ -57,7 +57,6 @@ const DatabaseModule = Module.forRootAsync({
       password: password,
       database: database,
       synchronize: shouldSync,
-      ssl: true,
       // logging level
       logging: isProduction === true ? ['info'] : ['query', 'log', 'info', 'error'],
       migrationsRun: shouldMigrate,
