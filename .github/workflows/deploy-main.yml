@@ -46,7 +46,7 @@ jobs:
                 - name: DB_PASSWORD
                   value: ${{vars.DB_PASSWORD}}
                 - name: DB_PORT
-                  value: "${{vars.DB_PORT}}
+                  value: ${{vars.DB_PORT}}
                 - name: DB_SYNC
                   value: ${{vars.DB_SYNC}}
                 - name: DB_USER
