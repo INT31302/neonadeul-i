@@ -178,3 +178,17 @@ export const getModal = (): ModalView => {
     )
     .buildToObject();
 };
+
+/**
+ * 메시지를 주어진 길이로 분할합니다.
+ * @param message - 원본 메시지
+ * @param chunkSize - 분할할 길이
+ * @returns - 분할된 메시지 배열
+ */
+export const splitMessage = (message: string, chunkSize: number): string[] => {
+  const chunks: string[] = [];
+  for (let i = 0; i < message.length; i += chunkSize) {
+    chunks.push(message.substring(i, i + chunkSize));
+  }
+  return chunks;
+};

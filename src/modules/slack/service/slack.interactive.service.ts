@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { createHomeTemplate } from '@src/modules/slack/slack.util';
+import { createHomeTemplate, splitMessage } from '@src/modules/slack/slack.util';
 import { CategoryType } from '@src/modules/motivation/movitation.type';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import {
@@ -67,13 +67,22 @@ export class SlackInteractiveService {
 
   /**
    * 메시지 수정
+   * 40,000자 이상일 경우 분할하여 발송합니다.
    * @param channel
    * @param message
    * @param ts
    */
   async updateMessage(channel: string, message: string, ts: string): Promise<ChatUpdateResponse> {
     try {
-      return await this.slack.chat.update({ text: message, ts, channel });
+      if (message.length < 40000) {
+        return await this.slack.chat.update({ text: message, ts, channel });
+      }
+      const chunkList = splitMessage(message, 40000);
+      const response = await this.slack.chat.update({ text: chunkList.shift(), ts, channel });
+      for (const chunk of chunkList) {
+        await this.postMessage(channel, chunk, ts);
+      }
+      return response;
     } catch (e) {
       this.logger.error('메시지 업데이트 중 문제가 발생했습니다.');
       throw e;
