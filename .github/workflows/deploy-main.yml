@@ -1,0 +1,79 @@
+name: Deploy to cloudtype
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Connect deploy key
+        uses: cloudtype-github-actions/connect@v1
+        with:
+          token: ${{ secrets.CLOUDTYPE_TOKEN }}
+          ghtoken: ${{ secrets.GHP_TOKEN }}
+      - name: Deploy
+        uses: cloudtype-github-actions/deploy@v1
+        with:
+          token: ${{ secrets.CLOUDTYPE_TOKEN }}
+          project: tkdwo287/neonaduel-i
+          stage: main
+          yaml: >
+            name: neonadeul-i
+
+            app: node@16
+
+            options:
+              env:
+                - name: NODE_ENV
+                  value: ${{vars.NODE_ENV}}
+                - name: AIRTABLE_API_KEY
+                  value: ${{vars.AIRTABLE_API_KEY}}
+                - name: AIRTABLE_BASE
+                  value: ${{vars.AIRTABLE_BASE}}
+                - name: APP_ENV
+                  value: ${{vars.APP_ENV}}
+                - name: BOT_USER_OAUTH_ACCESS_TOKEN
+                  value: ${{vars.BOT_USER_OAUTH_ACCESS_TOKEN}}
+                - name: DB_DATABASE
+                  value: ${{vars.DB_DATABASE}}
+                - name: DB_HOST
+                  value: ${{vars.DB_HOST}}
+                - name: DB_MIGRATE
+                  value: ${{vars.DB_MIGRATE}}
+                - name: DB_PASSWORD
+                  value: ${{vars.DB_PASSWORD}}
+                - name: DB_PORT
+                  value: "${{vars.DB_PORT}}
+                - name: DB_SYNC
+                  value: ${{vars.DB_SYNC}}
+                - name: DB_USER
+                  value: ${{vars.DB_USER}}
+                - name: EASTER_EGG_DB
+                  value: ${{vars.EASTER_EGG_DB}}
+                - name: HOLIDAY_API_KEY
+                  value: ${{vars.HOLIDAY_API_KEY}}
+                - name: MOTIVATION_SUGGEST_DB
+                  value: ${{vars.MOTIVATION_SUGGEST_DB}}
+                - name: NOTION_TOKEN
+                  value: ${{vars.NOTION_TOKEN}}
+                - name: NPM_CONFIG_PRODUCTION
+                  value: ${{vars.NPM_CONFIG_PRODUCTION}}
+                - name: ONLINE_DATABASE_PROVIDER
+                  value: ${{vars.ONLINE_DATABASE_PROVIDER}}
+                - name: OPENAI_API_KEY
+                  value: ${{vars.OPENAI_API_KEY}}
+                - name: OPENAI_ORGANIZATION_ID
+                  value: ${{vars.OPENAI_ORGANIZATION_ID}}
+                - name: SENTRY_DSN
+                  value: ${{vars.SENTRY_DSN}}
+                - name: TZ
+                  value: ${{vars.TZ}}
+              ports: 3000
+              buildenv: []
+            context:
+              git:
+                url: git@github.com:${{ github.repository }}.git
+                ref: ${{ github.ref }}
