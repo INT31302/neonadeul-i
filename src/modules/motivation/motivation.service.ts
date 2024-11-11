@@ -1,44 +1,47 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Motivation } from '@src/modules/motivation/entities/motivation.entity';
-import * as dayjs from 'dayjs';
-import { CategoryType } from '@src/modules/motivation/movitation.type';
-import { Cron, CronExpression } from '@nestjs/schedule';
-import { SlackInteractiveService } from '@src/modules/slack/service/slack.interactive.service';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { UserService } from '@src/modules/user/user.service';
-import { HolidayService } from '@src/modules/holiday/holiday.service';
-import { OnlineDatabaseInterfaceService } from '@lib/online-database-interface';
-import { MotivationModel } from '@lib/online-database-interface/online-database-interface.type';
-import { CategoryWeight } from '@src/modules/motivation/category.weight';
-import { ConfigService } from '@nestjs/config';
-import { getRandomNumber } from '@src/modules/common/utils';
+import { Injectable, Logger } from "@nestjs/common";
+import { Motivation } from "@src/modules/motivation/entities/motivation.entity";
+import * as dayjs from "dayjs";
+import { CategoryType } from "@src/modules/motivation/movitation.type";
+import { Cron, CronExpression } from "@nestjs/schedule";
+import { SlackInteractiveService } from "@src/modules/slack/service/slack.interactive.service";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { UserService } from "@src/modules/user/user.service";
+import { HolidayService } from "@src/modules/holiday/holiday.service";
+import { OnlineDatabaseInterfaceService } from "@lib/online-database-interface";
+import { MotivationModel } from "@lib/online-database-interface/online-database-interface.type";
+import { CategoryWeight } from "@src/modules/motivation/category.weight";
+import { ConfigService } from "@nestjs/config";
+import { getRandomNumber } from "@src/modules/common/utils";
+import { User } from "@src/modules/user/entities/user.entity";
 
 @Injectable()
 export class MotivationService {
   private readonly logger: Logger = new Logger(this.constructor.name);
+
   constructor(
     @InjectRepository(Motivation) private motivationRepository: Repository<Motivation>,
     private readonly userService: UserService,
     private readonly holidayService: HolidayService,
     private readonly configService: ConfigService,
     private readonly slackInteractiveService: SlackInteractiveService,
-    private readonly onlineDatabaseService: OnlineDatabaseInterfaceService,
-  ) {}
+    private readonly onlineDatabaseService: OnlineDatabaseInterfaceService
+  ) {
+  }
 
   /**
    *
    * @private
    */
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, {
-    timeZone: 'Asia/Seoul',
+    timeZone: "Asia/Seoul"
   })
   private async createConfirmMotivation() {
     try {
       const modelList = await this.onlineDatabaseService.searchConfirmMotivation();
 
       if (modelList.length === 0) {
-        this.logger.log('승인된 추천 글귀가 없습니다.');
+        this.logger.log("승인된 추천 글귀가 없습니다.");
         return;
       }
 
@@ -46,7 +49,7 @@ export class MotivationService {
         return resultList.map(({ contents, category }) => {
           return this.motivationRepository.create({
             contents: contents,
-            category: CategoryType[category],
+            category: CategoryType[category]
           });
         });
       };
@@ -57,7 +60,7 @@ export class MotivationService {
       await this.onlineDatabaseService.updateMotivationRecord(modelList);
     } catch (e) {
       if (e instanceof Error) {
-        this.logger.error('추천 글귀 추가 과정 중 문제가 발생했습니다.');
+        this.logger.error("추천 글귀 추가 과정 중 문제가 발생했습니다.");
         throw e;
       }
     }
@@ -68,23 +71,23 @@ export class MotivationService {
    * 지정한 공휴일의 경우 발송하지 않습니다.
    * @private
    */
-  @Cron('*/10 * * * 1-5', {
-    timeZone: 'Asia/Seoul',
+  @Cron("*/10 * * * 1-5", {
+    timeZone: "Asia/Seoul"
   })
   private async sendMotivation(): Promise<void> {
     try {
-      if (this.configService.get<string>('APP_ENV') !== 'prod') {
-        this.logger.debug('운영환경이 아니기 때문에 종료합니다.');
+      if (this.configService.get<string>("APP_ENV") !== "prod") {
+        this.logger.debug("운영환경이 아니기 때문에 종료합니다.");
         return;
       }
 
-      const holiday = await this.holidayService.findOne(dayjs().format('YYYYMMDD'));
+      const holiday = await this.holidayService.findOne(dayjs().format("YYYYMMDD"));
       if (holiday) {
-        this.logger.log('공휴일이기 때문에 메시지 발송을 종료합니다.');
+        this.logger.log("공휴일이기 때문에 메시지 발송을 종료합니다.");
         return;
       }
 
-      const time = dayjs().format('HH:mm');
+      const time = dayjs().format("HH:mm");
       this.logger.log(`메시지 수신 대상자를 조회합니다. (${time})`);
       const userList = await this.userService.findSubscriberOnPushTime(time);
 
@@ -102,12 +105,16 @@ export class MotivationService {
         await this.slackInteractiveService.postMessage(
           user.channelId,
           `${user.name}. 오늘의 메시지가 도착했어요. 오늘 하루도 힘내세요!
->>>${motivation.contents}`,
+>>>${motivation.contents}`
         );
+        const now = dayjs();
+        if (now.year() === 2024 && now.month() === 10 && now.date() === 13 && !user.jerry) {
+          await this.slackInteractiveService.postMessage(user.channelId, await this.getServiceClosedMessage(user));
+        }
       }
       this.logger.log(`${userList.length}명에게 메시지 전송 완료. (${time})`);
     } catch (e) {
-      if (e instanceof Error) this.logger.error('글귀 발송 과정 중 문제가 발생했습니다.');
+      if (e instanceof Error) this.logger.error("글귀 발송 과정 중 문제가 발생했습니다.");
       throw e;
     }
   }
@@ -123,33 +130,18 @@ export class MotivationService {
   private async getMotivation(motivationList: Motivation[], category: CategoryType, isModernText: boolean) {
     const filteredMotivationList = motivationList.filter((item) => item.category === category);
     if (isModernText) {
-      filteredMotivationList.push(...filteredMotivationList.filter((item) => item.category === CategoryType['기타']));
+      filteredMotivationList.push(...filteredMotivationList.filter((item) => item.category === CategoryType["기타"]));
     }
     return filteredMotivationList[Math.floor(getRandomNumber() * filteredMotivationList.length)];
   }
 
-  // 이벤트 종료
-  // /**
-  //  * 1주년 메시지 발송
-  //  * 2023-01-13 11:00 기준 구독자에게 전체 발송
-  // private async sendEventMessage() {
-  //   const now = dayjs();
-  //   if (now.year() === 2023 && now.month() === 0 && now.date() === 13 && now.hour() === 11 && now.minute() === 0) {
-  //     const message = await this.notionService.searchEasterEgg(process.env.FIRST_YEAR_MESSAGE);
-  //
-  //     const userList = await this.userRepository.find({
-  //       where: { isSubscribe: true },
-  //     });
-  //     userList.map(async (user) => {
-  //       let newMessage = message.replace(/\${name}/gi, user.name);
-  //       newMessage = newMessage.replace(/\${josa}/gi, isEndWithConsonant(user.name) ? '을' : '를');
-  //       try {
-  //         await this.slackInteractiveService.postMessage(user.channelId, newMessage);
-  //       } catch (e) {
-  //         this.logger.error(`${user.name} 오류`);
-  //         throw e;
-  //       }
-  //     });
-  //   }
-  // }*/
+  /**
+   * 서비스 종료 메시지 발송
+   * 2024-11-13 기준 구독자에게 전체 발송
+   * */
+  private async getServiceClosedMessage(user: User) {
+    await this.userService.updateJerry(user.id);
+    const message = await this.onlineDatabaseService.searchEasterEgg("서비스 종료");
+    return message.replace(/\${name}/gi, user.name);
+  }
 }

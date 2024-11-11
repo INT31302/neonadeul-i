@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { User } from '@src/modules/user/entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, UpdateResult } from 'typeorm';
-import { Cron, CronExpression } from '@nestjs/schedule';
 import { DeepPartial } from 'typeorm/common/DeepPartial';
 import { CategoryType } from '@src/modules/motivation/movitation.type';
 
@@ -12,12 +11,8 @@ export class UserService {
 
   constructor(@InjectRepository(User) private userRepository: Repository<User>) {}
 
-  /**
-   * 매달 1일 jerry 리셋
-   */
-  @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT, { timeZone: 'Asia/Seoul' })
-  async resetJerry(): Promise<void> {
-    await this.userRepository.update({ jerry: true }, { jerry: false });
+  async updateJerry(id: string): Promise<void> {
+    await this.userRepository.update({ id }, { jerry: true });
     this.logger.log('jerry 리셋 완료');
   }
   /**
